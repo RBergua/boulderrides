@@ -42,6 +42,14 @@
     .ride-tooltip {
       font-size: 1.5em; /* font size for tooltips */
     }
+    /* Mobile: make the tooltip look tappable with a Strava link at the bottom */
+    .ride-tooltip-link {
+      display: block;
+      margin-top: 6px;
+      color: #007bff;
+      text-decoration: underline;
+      cursor: pointer;
+    }
     .day-name { font-weight: bold; }
     .day-date { font-size: 0.85em; color: gray; }
     .selected { background-color: #007bff; color: white; } /* background color blue when selected */
@@ -60,6 +68,11 @@
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <script>
+  // -------------------------------
+  // Detect touch device (mobile)
+  // -------------------------------
+  const isTouchDevice = ('ontouchstart' in window) && navigator.maxTouchPoints > 0 && window.matchMedia("(pointer: coarse)").matches; // pointer: coarse means the primary input is a finger (mobile), not a mouse.
+
   // -------------------------------
   // Initialize Leaflet map
   // -------------------------------
@@ -92,8 +105,54 @@
     });
   
   // -------------------------------
-  // Function to draw routes for a given date
+  // Attach events to a layer (polyline or circleMarker)
+  // Desktop: hover to show tooltip, click to open URL
+  // Mobile: first tap shows tooltip, second tap opens URL
   // -------------------------------
+  function attachEvents(layer, ride, defaultWeight, hoverWeight) {
+    const tooltipContent = isTouchDevice
+      // Mobile: include a tappable "Open in Strava" link inside the tooltip
+      ? `<b>${ride.club_name}</b><br>
+         ${ride.title}<br>
+         ${ride.women_only ? 'Women only<br>' : ''}
+         ${ride.date.split(" ")[1]}
+         ${ride.url ? `<a class="ride-tooltip-link" href="${ride.url}" target="_blank">Open in Strava</a>` : ''}`
+      // Desktop: plain tooltip, click on route opens URL
+      : `<b>${ride.club_name}</b><br>
+         ${ride.title}<br>
+         ${ride.women_only ? 'Women only<br>' : ''}
+         ${ride.date.split(" ")[1]}`;
+
+    layer.bindTooltip(tooltipContent, {
+      sticky: !isTouchDevice, // sticky follows cursor on desktop; fixed position on mobile
+      interactive: isTouchDevice, // allow clicking links inside tooltip on mobile
+      className: 'ride-tooltip'
+    });
+
+    if (isTouchDevice) {
+      // Mobile: tap to open tooltip (with the link inside to go to Strava)
+      layer.on('click', function () {
+        if (this.isTooltipOpen()) {
+          this.closeTooltip();
+        } else {
+          // Close any other open tooltips first
+          map.eachLayer(l => { if (l.closeTooltip) l.closeTooltip(); });
+          this.openTooltip();
+        }
+      });
+    } else {
+      // Desktop: hover to highlight, click to open URL. Original behavior
+      layer.on('mouseover', function () { this.setStyle({ weight: hoverWeight }); });
+      layer.on('mouseout',  function () { this.setStyle({ weight: defaultWeight }); });
+      layer.on('click', function () {
+        if (ride.url) window.open(ride.url, '_blank');
+      });
+    }
+  }
+
+  // -------------------------------
+  // Function to draw routes for a given date
+  // -------------------------------  
   function loadRoutes(date) {
 
     // Debug logs to check the selected date and available rides (CTRL+SHIFT+I in browser to open console)
@@ -123,43 +182,19 @@
     routes.forEach((ride, idx) => {
       if (ride.route && ride.route.length > 0) {
         const color = ride.color || colors[idx % colors.length]; // cycle colors if more routes than colors
-        L.polyline(ride.route, {
-          color: color, 
+        
+        const polyline = L.polyline(ride.route, {
+          color: color,
           weight: 4,
           opacity: 0.8
-        })
-        // Show ride details on hover
-        .bindTooltip(
-          `<b>${ride.club_name}</b><br>
-          ${ride.title}<br>
-          ${ride.women_only ? 'Women only<br>' : ''}
-          ${ride.date.split(" ")[1]}`,
-          { sticky: true, className: 'ride-tooltip' }
-        )
-        // Follow URL on click
-        .on('mouseover', function() { this.setStyle({ weight: 7 }); })
-        .on('mouseout',  function() { this.setStyle({ weight: 4 }); })
-        .on('click', function() {
-          if (ride.url) window.open(ride.url, '_blank');
-        })
-        .addTo(fg);
+        }).addTo(fg);
+        attachEvents(polyline, ride, 4, 7);
 
         // Add the marker for the start of the ride
         const start = ride.starting_location || ride.route[0];
-        L.circleMarker(start, { radius: 6, color: color, fillColor: color, fillOpacity: 1 })
-          .bindTooltip(
-            `<b>${ride.club_name}</b><br>
-            ${ride.title}<br>
-            ${ride.women_only ? 'Women only<br>' : ''}
-            ${ride.date.split(" ")[1]}`,
-            { sticky: true, className: 'ride-tooltip' }
-          )
-          .on('mouseover', function() { this.setStyle({ weight: 7 }); })
-          .on('mouseout',  function() { this.setStyle({ weight: 4 }); })
-          .on('click', function() {
-            if (ride.url) window.open(ride.url, '_blank');
-          })
+        const marker = L.circleMarker(start, { radius: 6, color: color, fillColor: color, fillOpacity: 1 })
           .addTo(fg);
+        attachEvents(marker, ride, 1, 4);
       }
     });
 
