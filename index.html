@@ -158,7 +158,7 @@
           // Second tap → close tooltip and open Strava
           // -------------------------------------------------------
           
-          const hitArea = L.polyline(ride.route, { weight: 50, opacity: 0 }).addTo(fg);
+          const hitArea = L.polyline(ride.route, { weight: 100, opacity: 0 }).addTo(fg);
           hitArea._tooltipShown = false;
           hitArea.bindTooltip(tooltipContent, { sticky: false, className: 'ride-tooltip' });
 
