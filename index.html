@@ -49,20 +49,6 @@
     #map {
       height: calc(100% - 60px); /* 100% minus calendar height */
     }
-    /* Debug box - visible on screen for mobile testing */
-    #debug {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      background: yellow;
-      font-size: 12px;
-      padding: 4px;
-      z-index: 9999;
-      max-height: 150px;
-      overflow-y: auto;
-      white-space: pre-wrap;
-      max-width: 100%;
-    }
   </style>
 </head>
 <body>
@@ -76,20 +62,10 @@
 
 <script>
   // -------------------------------
-  // Debug logger (visible on screen, useful for mobile)
-  // -------------------------------
-  function log(msg) {
-    const box = document.getElementById('debug');
-    box.innerText += msg + '\n';
-    box.scrollTop = box.scrollHeight;
-  }
-
-  // -------------------------------
   // Detect touch device (mobile)
   // -------------------------------
   const isTouchDevice = window.matchMedia("(pointer: coarse)").matches;
-  //console.log("isTouchDevice:", isTouchDevice); // Check if we detect computer vs mobile devices properly (CTRL+SHIFT+I in browser to open console)
-  log('isTouchDevice: ' + isTouchDevice);
+  console.log("isTouchDevice:", isTouchDevice); // Check if we detect computer vs mobile devices properly (CTRL+SHIFT+I in browser to open console)
 
   // -------------------------------
   // Initialize Leaflet map
@@ -98,10 +74,10 @@
   const defaultZoom = 14; // Zoom level 14
   const map = L.map('map', { zoomSnap: 0 }).setView(defaultCenter, defaultZoom); // zoomSnap: 0 allows for smoother zooming without forcing integer zoom levels
 
-  // On mobile: Close open tooltips only when tapping the map background (not a route or tooltip)
+  // Close all tooltips when tapping the map background
   map.on('click', function () {
-    log('map background tapped');
     map.eachLayer(l => { if (l.closeTooltip) l.closeTooltip(); });
+    map.eachLayer(l => { if (l._tooltipShown !== undefined) l._tooltipShown = false; });
   });
   
   // Original OpenStreetMap 
@@ -118,7 +94,6 @@
   fetch('club_rides.json?v=' + Date.now()) // ?v=Date.now() prevents cached version from being used
     .then(response => response.json())
     .then(rides => {
-      log('Rides loaded: ' + rides.length);
       // Group rides by date (YYYY-MM-DD)
       rides.forEach(ride => {
         const date = ride.date.split(" ")[0]; // Extract YYYY-MM-DD from "2026-03-04 12:00"
@@ -130,58 +105,10 @@
     });
   
   // -------------------------------
-  // Attach events to a layer (polyline or circleMarker)
+  // Function to draw routes for a given date
   // Desktop: hover to show tooltip, click to open URL
   // Mobile: first tap shows tooltip, second tap opens URL
   // -------------------------------
-  function attachEvents(layer, ride, defaultWeight, hoverWeight) {
-    const tooltipContent = isTouchDevice
-      // Mobile: include a tappable "Open in Strava" link inside the tooltip
-      ? `<b>${ride.club_name}</b><br>
-        ${ride.title}<br>
-        ${ride.women_only ? 'Women only<br>' : ''}
-        ${ride.date.split(" ")[1]}<br>
-        ${ride.url ? '<i>Tap again to open in Strava</i>' : ''}`
-      // Desktop: plain tooltip, click on route opens URL
-      : `<b>${ride.club_name}</b><br>
-         ${ride.title}<br>
-         ${ride.women_only ? 'Women only<br>' : ''}
-         ${ride.date.split(" ")[1]}`;
-
-    layer.bindTooltip(tooltipContent, {
-      sticky: !isTouchDevice, // sticky follows cursor on desktop; fixed position on mobile
-      className: 'ride-tooltip'
-    });
-
-    if (isTouchDevice) {
-      // Mobile: tap to open/close tooltip (with the link inside to go to Strava)
-      layer.on('click', function (e) {
-        L.DomEvent.stopPropagation(e); // prevent map click from closing tooltip
-        const isOpen = this.isTooltipOpen(); // IMPORTANT: use local variable, not window.open
-        log('route tapped, tooltipOpen was: ' + isOpen);
-        if (isOpen) {
-          // Second tap → open Strava
-          this.closeTooltip();
-          if (ride.url) window.open(ride.url, '_blank');
-        } else {
-          // First tap → show tooltip
-          map.eachLayer(l => { if (l.closeTooltip) l.closeTooltip(); });
-          this.openTooltip();
-        }
-      });
-    } else {
-      // Desktop: hover to highlight, click to open URL. Original behavior
-      layer.on('mouseover', function () { this.setStyle({ weight: hoverWeight }); });
-      layer.on('mouseout',  function () { this.setStyle({ weight: defaultWeight }); });
-      layer.on('click', function () {
-        if (ride.url) window.open(ride.url, '_blank');
-      });
-    }
-  }
-
-  // -------------------------------
-  // Function to draw routes for a given date
-  // -------------------------------  
   function loadRoutes(date) {
 
     // Debug logs to check the selected date and available rides (CTRL+SHIFT+I in browser to open console)
@@ -212,31 +139,82 @@
       if (ride.route && ride.route.length > 0) {
         const color = ride.color || colors[idx % colors.length]; // cycle colors if more routes than colors
         
-        // Invisible wide polyline for easier tapping on mobile or hovering on desktop
+        const tooltipContent = isTouchDevice
+          ? `<b>${ride.club_name}</b><br>
+             ${ride.title}<br>
+             ${ride.women_only ? 'Women only<br>' : ''}
+             ${ride.date.split(" ")[1]}<br>
+             ${ride.url ? '<i>Tap again to open in Strava</i>' : ''}`
+          : `<b>${ride.club_name}</b><br>
+             ${ride.title}<br>
+             ${ride.women_only ? 'Women only<br>' : ''}
+             ${ride.date.split(" ")[1]}`;
+        
         if (isTouchDevice) {
-          // Mobile: invisible wide polyline for easier tapping
+          // -------------------------------------------------------
+          // MOBILE: one wide invisible hit area handles all tapping.
+          // State tracked with _tooltipShown boolean.
+          // First tap  → show tooltip
+          // Second tap → close tooltip and open Strava
+          // -------------------------------------------------------
+          
           const hitArea = L.polyline(ride.route, { weight: 50, opacity: 0 }).addTo(fg);
-          attachEvents(hitArea, ride, 50, 50);
+          hitArea._tooltipShown = false;
+          hitArea.bindTooltip(tooltipContent, { sticky: false, className: 'ride-tooltip' });
+
+          hitArea.on('click', function (e) {
+            L.DomEvent.stopPropagation(e); // prevent map background click from firing
+            if (this._tooltipShown) {
+              // Second tap → close tooltip and open Strava
+              this.closeTooltip();
+              this._tooltipShown = false;
+              if (ride.url) window.open(ride.url, '_blank');
+            } else {
+              // First tap → close any other open tooltips, show this one
+              map.eachLayer(l => {
+                if (l.closeTooltip) l.closeTooltip();
+                if (l._tooltipShown !== undefined) l._tooltipShown = false;
+              });
+              this.openTooltip();
+              this._tooltipShown = true;
+            }
+          });
+
+          // Visible polyline — purely visual, no events on mobile
+          L.polyline(ride.route, { color: color, weight: 4, opacity: 0.8 }).addTo(fg);
+
+          // Start marker — purely visual, no events on mobile
+          const start = ride.starting_location || ride.route[0];
+          L.circleMarker(start, { radius: 6, color: color, fillColor: color, fillOpacity: 1 }).addTo(fg);
+
         } else {
-          // Desktop: invisible wide polyline for easier hovering/clicking
+          // -------------------------------------------------------
+          // DESKTOP: wide invisible hit area + visible polyline.
+          // Hover highlights the route, click opens Strava.
+          // -------------------------------------------------------
+
+          // Wide invisible hit area for easier hovering/clicking
           const hitArea = L.polyline(ride.route, { weight: 20, opacity: 0 }).addTo(fg);
-          attachEvents(hitArea, ride, 20, 20);
+          hitArea.bindTooltip(tooltipContent, { sticky: true, className: 'ride-tooltip' });
+          hitArea.on('mouseover', function () { visibleLine.setStyle({ weight: 7 }); });
+          hitArea.on('mouseout',  function () { visibleLine.setStyle({ weight: 4 }); });
+          hitArea.on('click', function () { if (ride.url) window.open(ride.url, '_blank'); });
+
+          // Visible polyline
+          const visibleLine = L.polyline(ride.route, { color: color, weight: 4, opacity: 0.8 }).addTo(fg);
+          visibleLine.bindTooltip(tooltipContent, { sticky: true, className: 'ride-tooltip' });
+          visibleLine.on('mouseover', function () { this.setStyle({ weight: 7 }); });
+          visibleLine.on('mouseout',  function () { this.setStyle({ weight: 4 }); });
+          visibleLine.on('click', function () { if (ride.url) window.open(ride.url, '_blank'); });
+
+          // Start marker
+          const start = ride.starting_location || ride.route[0];
+          const marker = L.circleMarker(start, { radius: 6, color: color, fillColor: color, fillOpacity: 1 }).addTo(fg);
+          marker.bindTooltip(tooltipContent, { sticky: true, className: 'ride-tooltip' });
+          marker.on('mouseover', function () { this.setStyle({ weight: 7 }); });
+          marker.on('mouseout',  function () { this.setStyle({ weight: 1 }); });
+          marker.on('click', function () { if (ride.url) window.open(ride.url, '_blank'); });
         }
-
-        // Visible polyline
-        const polyline = L.polyline(ride.route, {
-          color: color,
-          weight: 4,
-          opacity: 0.8
-        }).addTo(fg);
-        attachEvents(polyline, ride, 4, 7);
-        if (!isTouchDevice) attachEvents(polyline, ride, 4, 7); // For desktop
-
-        // Add the marker for the start of the ride
-        const start = ride.starting_location || ride.route[0];
-        const marker = L.circleMarker(start, { radius: 6, color: color, fillColor: color, fillOpacity: 1 })
-          .addTo(fg);
-        attachEvents(marker, ride, 1, 4);
       }
     });
 
@@ -247,10 +225,9 @@
       const mapSize = map.getSize();
       const padX = Math.round(mapSize.x * 0.05);
       const padY = Math.round(mapSize.y * 0.05);
-
       map.fitBounds(bounds, {
         paddingTopLeft: [padX, padY],
-        paddingBottomRight: [padX, padY],
+        paddingBottomRight: [padX, padY],      
         maxZoom: defaultZoom // Fit to bounds but don't zoom in more than defaultZoom
       });
     }
