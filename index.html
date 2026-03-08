@@ -71,7 +71,7 @@
   // -------------------------------
   // Detect touch device (mobile)
   // -------------------------------
-  const isTouchDevice = ('ontouchstart' in window) && navigator.maxTouchPoints > 0 && window.matchMedia("(pointer: coarse)").matches; // pointer: coarse means the primary input is a finger (mobile), not a mouse.
+  const isTouchDevice = window.matchMedia("(pointer: coarse)").matches;
 
   // -------------------------------
   // Initialize Leaflet map
