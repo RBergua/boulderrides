@@ -57,22 +57,47 @@
     #map {
       height: calc(100% - 60px); /* 100% minus calendar height */
     }
+    /* Debug box - visible on screen for mobile testing */
+    #debug {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      background: yellow;
+      font-size: 12px;
+      padding: 4px;
+      z-index: 9999;
+      max-height: 150px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      max-width: 100%;
+    }
   </style>
 </head>
 <body>
 
 <div id="calendar"></div>
 <div id="map"></div>
+<div id="debug"></div>
 
 <!-- Leaflet JS -->
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <script>
   // -------------------------------
+  // Debug logger (visible on screen, useful for mobile)
+  // -------------------------------
+  function log(msg) {
+    const box = document.getElementById('debug');
+    box.innerText += msg + '\n';
+    box.scrollTop = box.scrollHeight;
+  }
+
+  // -------------------------------
   // Detect touch device (mobile)
   // -------------------------------
   const isTouchDevice = window.matchMedia("(pointer: coarse)").matches;
-  console.log("isTouchDevice:", isTouchDevice); // Check if we detect computer vs mobile devices properly (CTRL+SHIFT+I in browser to open console)
+  //console.log("isTouchDevice:", isTouchDevice); // Check if we detect computer vs mobile devices properly (CTRL+SHIFT+I in browser to open console)
+  log('isTouchDevice: ' + isTouchDevice);
 
   // -------------------------------
   // Initialize Leaflet map
@@ -97,9 +122,10 @@
   // ------------------------------- 
   let ridesByDate = {};
 
-  fetch('club_rides.json')
+  fetch('club_rides.json?v=' + Date.now()) // ?v=Date.now() prevents cached version from being used
     .then(response => response.json())
     .then(rides => {
+      log('Rides loaded: ' + rides.length);
       // Group rides by date (YYYY-MM-DD)
       rides.forEach(ride => {
         const date = ride.date.split(" ")[0]; // Extract YYYY-MM-DD from "2026-03-04 12:00"
@@ -139,6 +165,7 @@
       // Mobile: tap to open/close tooltip (with the link inside to go to Strava)
       layer.on('click', function (e) {
         L.DomEvent.stopPropagation(e); // prevent map click from closing tooltip
+        log('route tapped, tooltipOpen was: ' + open);
         if (this.isTooltipOpen()) {
           this.closeTooltip();
         } else {
