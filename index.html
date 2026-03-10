@@ -7,6 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- Leaflet CSS -->
+  <!-- If a future version breaks the map, use this link instead: https://unpkg.com/leaflet@1.9.4/dist/leaflet.css --> 
   <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet/dist/leaflet.css"
@@ -204,16 +205,16 @@
 
     <h2>Contact &amp; support</h2>
     <p>
-      More information and HTML code for the frontend is available on <a href="https://github.com/RBergua/Boulderrides">https://github.com/RBergua/Boulderrides</a>.
+      More information and HTML code for the frontend is available on <a href="https://github.com/RBergua/Boulderrides" target="_blank" rel="noopener noreferrer">https://github.com/RBergua/Boulderrides</a>.
     </p>
     <p>
-      Questions, bugs, or club suggestions? <a href="https://github.com/RBergua/Boulderrides/issues" target="_blank">Open an issue on GitHub</a>.
+      Questions, bugs, or club suggestions? <a href="https://github.com/RBergua/Boulderrides/issues" target="_blank" rel="noopener noreferrer">Open an issue on GitHub</a>.
     </p>
     <p>
       This project is free and runs on a personal server 24/7. If it has saved you time or gotten you out on a ride, a $3 "Buy Me a Coffee" contribution goes a long way toward keeping it alive.
     </p>
     <p>
-      <a href="https://buymeacoffee.com/rbergua" target="_blank">
+      <a href="https://buymeacoffee.com/rbergua" target="_blank" rel="noopener noreferrer">
         <img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-FFDD00?logo=buy-me-a-coffee&logoColor=black" alt="Buy Me a Coffee">
       </a>
     </p>
@@ -221,6 +222,7 @@
 </div>
 
 <!-- Leaflet JS -->
+<!-- If a future version breaks the map, use this link instead: https://unpkg.com/leaflet@1.9.4/dist/leaflet.js --> 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <script>
@@ -336,7 +338,7 @@
               // Second tap → close tooltip and open Strava
               this.closeTooltip();
               this._tooltipShown = false;
-              if (ride.url) window.open(ride.url, '_blank');
+              if (ride.url) window.open(ride.url, '_blank', 'noopener,noreferrer');
             } else {
               // First tap → close any other open tooltips, show this one
               map.eachLayer(l => {
@@ -366,14 +368,14 @@
           hitArea.bindTooltip(tooltipContent, { sticky: true, className: 'ride-tooltip' });
           hitArea.on('mouseover', function () { visibleLine.setStyle({ weight: 7 }); });
           hitArea.on('mouseout',  function () { visibleLine.setStyle({ weight: 4 }); });
-          hitArea.on('click', function () { if (ride.url) window.open(ride.url, '_blank'); });
+          hitArea.on('click', function () { if (ride.url) window.open(ride.url, '_blank', 'noopener,noreferrer'); });
 
           // Visible polyline
           const visibleLine = L.polyline(ride.route, { color: color, weight: 4, opacity: 0.8 }).addTo(fg);
           visibleLine.bindTooltip(tooltipContent, { sticky: true, className: 'ride-tooltip' });
           visibleLine.on('mouseover', function () { this.setStyle({ weight: 7 }); });
           visibleLine.on('mouseout',  function () { this.setStyle({ weight: 4 }); });
-          visibleLine.on('click', function () { if (ride.url) window.open(ride.url, '_blank'); });
+          visibleLine.on('click', function () { if (ride.url) window.open(ride.url, '_blank', 'noopener,noreferrer'); });
 
           // Start marker
           const start = ride.starting_location || ride.route[0];
@@ -381,7 +383,7 @@
           marker.bindTooltip(tooltipContent, { sticky: true, className: 'ride-tooltip' });
           marker.on('mouseover', function () { this.setStyle({ weight: 3 }); });
           marker.on('mouseout',  function () { this.setStyle({ weight: 1 }); });
-          marker.on('click', function () { if (ride.url) window.open(ride.url, '_blank'); });
+          marker.on('click', function () { if (ride.url) window.open(ride.url, '_blank', 'noopener,noreferrer'); });
         }
       }
     });
