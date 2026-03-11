@@ -31,7 +31,7 @@ Then open [http://localhost:8000](http://localhost:8000) in your browser.
 
 ## Live version
 
-[https://rbergua.github.io/Boulderrides/](https://rbergua.github.io/Boulderrides/)
+[https://rbergua.github.io/boulderrides/](https://rbergua.github.io/boulderrides/)
 
 ## Data Format
 
