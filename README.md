@@ -1,10 +1,17 @@
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-FFDD00?logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/rbergua)
+![GitHub last commit](https://img.shields.io/github/last-commit/rbergua/boulderrides?style=flat)
 
 # Boulder Group Rides
 
-An interactive map showing local cycling club group rides in the Boulder, CO area. Browse upcoming rides by day, view routes on a map, and click to see event details and join.
+An interactive map showing **cycling group rides in Boulder, Colorado**.  
+It aggregates **Strava club events** and displays upcoming rides by day.
 
 ![Boulder Group Rides demo](demo.gif)
+
+## Live version
+
+- **Primary site:** https://boulderrides.cc  
+- **GitHub Pages:** https://rbergua.github.io/boulderrides/
 
 ## Features
 
@@ -28,11 +35,6 @@ python -m http.server 8000
 ```
 
 Then open [http://localhost:8000](http://localhost:8000) in your browser.
-
-## Live version
-
-- **Primary site:** https://boulderrides.cc  
-- **GitHub Pages:** https://rbergua.github.io/boulderrides/
 
 ## Data Format
 
