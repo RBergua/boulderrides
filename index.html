@@ -239,6 +239,18 @@
   console.log("isTouchDevice:", isTouchDevice); // Check if we detect computer vs mobile devices properly (CTRL+SHIFT+I in browser to open console)
 
   // -------------------------------
+  // Convert "HH:MM" (24-hour format) to "H:MM AM/PM" (12-hour format). More common in the US.
+  // -------------------------------
+  function formatTime12h(timeStr) {
+    const [hourStr, minuteStr] = timeStr.split(":"); // Spliting into hourStr and minuteSt
+    let hour = parseInt(hourStr, 10); // Convert to integer (to do some math below)
+    const minute = minuteStr;
+    const ampm = hour >= 12 ? "PM" : "AM"; // hours 12–23 are PM, hours 0–11 are AM
+    hour = hour % 12 || 12; // convert to 12-hour fomat. hour÷12 remainder: 13→1, 14→2 … but 0 and 12 both give remainder 0, so || 12 replaces that with 12.
+    return `${hour}:${minute} ${ampm}`;
+  }
+
+  // -------------------------------
   // Initialize Leaflet map
   // -------------------------------
   const defaultCenter = [40.01499, -105.27055]; // Boulder, CO. [Lat, Long]
@@ -309,17 +321,18 @@
     routes.forEach((ride, idx) => {
       if (ride.route && ride.route.length > 0) {
         const color = ride.color || colors[idx % colors.length]; // cycle colors if more routes than colors
-        
+        const rideTime = formatTime12h(ride.date.split(" ")[1]); // convert time to 12-hour format (AM/PM)
+
         const tooltipContent = isTouchDevice
           ? `<b>${ride.club_name}</b><br>
              ${ride.title}<br>
              ${ride.women_only ? 'Women only<br>' : ''}
-             ${ride.date.split(" ")[1]}<br>
+             ${rideTime}<br>
              ${ride.url ? '<i>Tap again to open in Strava</i>' : ''}`
           : `<b>${ride.club_name}</b><br>
              ${ride.title}<br>
              ${ride.women_only ? 'Women only<br>' : ''}
-             ${ride.date.split(" ")[1]}`;
+             ${rideTime}`;
         
         if (isTouchDevice) {
           // -------------------------------------------------------
