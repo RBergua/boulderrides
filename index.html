@@ -145,9 +145,10 @@
     #ride-sheet.open { transform: translateY(0); pointer-events: all; }
     #sheet-handle { width: 40px; height: 4px; background: #ccc; border-radius: 2px; margin: 12px auto 0; }
     #sheet-body { padding: 16px 20px 28px; font-family: Arial, sans-serif; }
-    #sheet-color-bar { width: 18px; height: 18px; border-radius: 50%; margin-bottom: 14px; background: #007bff; }
-    #sheet-club { font-size: 1.08em; font-weight: 700; color: #111; margin: 0 0 4px; line-height: 1.3; }
-    #sheet-title { font-size: 0.9em; font-weight: 400; letter-spacing: 0.08em; color: #888; margin: 0 0 12px; }
+    #sheet-header { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+    #sheet-color-bar { width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0; background: #007bff; }
+    #sheet-club { font-size: 1.15em; font-weight: 700; text-transform: uppercase; color: #111; line-height: 1.3; margin: 0; }
+    #sheet-title { font-size: 1.0em; font-weight: 400; color: #888; margin: 0 0 12px; }
     #sheet-meta { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
     .sheet-badge { background: #f0f6ff; color: #007bff; border: 1px solid #cce0ff; border-radius: 20px; padding: 4px 12px; font-size: 0.82em; font-weight: 600; }
     .sheet-badge.women { background: #f3f0ff; color: #6f42c1; border-color: #d0c4f7; }
@@ -184,8 +185,10 @@
 <div id="ride-sheet">
   <div id="sheet-handle"></div>
   <div id="sheet-body">
-    <div id="sheet-color-bar"></div>
-    <div id="sheet-club"></div>
+    <div id="sheet-header">
+      <div id="sheet-color-bar"></div>
+      <div id="sheet-club"></div>
+    </div>
     <div id="sheet-title"></div>
     <div id="sheet-meta"></div>
     <a id="sheet-strava-btn" target="_blank" rel="noopener noreferrer">Open in Strava</a>
@@ -457,7 +460,7 @@
           const tapHandler = (e) => {
             L.DomEvent.stopPropagation(e);
             if (currentHL && currentHL !== vl) currentHL.setStyle({ weight: 5, opacity: 0.85 });
-            vl.setStyle({ weight: 8, opacity: 1 });
+            vl.setStyle({ weight: 6.5, opacity: 1 });
             currentHL = vl;
             openSheet(ride);
           };
