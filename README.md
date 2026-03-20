@@ -19,9 +19,9 @@ It aggregates **Strava club events** and displays upcoming rides by day.
 ## Features
 
 - **7-day calendar** — Quickly see which days have scheduled rides; the first day with rides loads automatically
-- **Interactive map** — Routes are drawn as color-coded polylines using [Leaflet.js](https://leafletjs.com/) and OpenStreetMap tiles
-- **Desktop** — Hover over a route to see club name, ride title, start time, and whether the ride is women-only; click to open the Strava event in a new tab
-- **Mobile** — Tap a route to see its details in a panel at the bottom; tap "Open in Strava" to view the event; swipe the panel down to dismiss it
+- **Interactive map** — Routes are drawn as color-coded polylines using [Leaflet.js](https://leafletjs.com/) with MapTiler and an automatic fallback to OpenStreetMap
+- **Desktop** — Hover over a route to highlight it and dim the others, showing the club name, ride title, start time, and whether the ride is women-only; click to open the Strava event in a new tab
+- **Mobile** — Tap a route to see its details in a bottom sheet; tap "Open in Strava" to view the event; swipe the panel down (or tap the map background) to dismiss it
 - **Auto-fit bounds** — The map zooms to fit all routes for the selected day
 
 ## Getting Started
@@ -38,6 +38,10 @@ python -m http.server 8000
 ```
 
 Then open [http://localhost:8000](http://localhost:8000) in your browser.
+
+> **Tip:** Hard refresh (`Ctrl+Shift+R` on Windows/Linux, `Cmd+Shift+R` on Mac) forces the browser to re-download all files instead of using cached versions.
+ 
+> **Tip:** To emulate a mobile device, open browser DevTools (`F12`) and toggle the device toolbar.
 
 ## Data Format
 
@@ -65,7 +69,7 @@ Ride data is automatically fetched from the Strava API by a backend process that
 |---|---|---|
 | `club_name` | string | Name of the organizing club |
 | `title` | string | Ride name |
-| `date` | string | `"YYYY-MM-DD HH:MM"` format |
+| `date` | string | `"YYYY-MM-DD HH:MM"` in 24-hour format; displayed as 12-hour (AM/PM) in the frontend |
 | `url` | string | Link to the Strava ride event |
 | `women_only` | boolean | If `true`, shown in the description |
 | `starting_location` | `[lat, lng]` | Start marker position (optional; if not available, it uses the first point in `route`) |
@@ -84,12 +88,15 @@ Ride data is automatically fetched from the Strava API by a backend process that
 - **Default map center** — Update `defaultCenter` in `index.html` (currently set to downtown Boulder)
 - **Default zoom** — Update `defaultZoom` (currently `14`)
 - **Route colors** — Edit the `colors` palette array in `index.html` to change the cycle of colors assigned to routes
+- **Map tiles** — The app tries MapTiler (outdoor/terrain) first and silently falls back to OpenStreetMap if the MapTiler quota is exceeded or the key is invalid. The MapTiler API key is locked to requests from `boulderrides.cc`
 
 ## Built With
 
 - [Leaflet.js](https://leafletjs.com/) — Interactive maps
-- [OpenStreetMap](https://www.openstreetmap.org/) — Map tiles
+- [MapTiler](https://www.maptiler.com/) — Outdoor/terrain map tiles (primary)
+- [OpenStreetMap](https://www.openstreetmap.org/) — Map tiles (fallback)
 - [Strava API](https://developers.strava.com/) — Source of group ride data, fetched by the backend
+- [GoatCounter](https://www.goatcounter.com/) — Privacy-friendly analytics
 
 ## Support
 
