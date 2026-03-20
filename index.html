@@ -338,34 +338,40 @@
   // MapTiler: We have 5,000 sessions and 100,000 requests/month for free (https://www.maptiler.com/pricing/)
   // The tile requests per user around ~25 tiles.
   // MapTiler is heavier than OSM, but has terrain shading, trail detail, and topographic richness.
-  // Tiles should be cached in the user's browser after the first load. But only lasts 4 hours! 
-  // The key below is linked to requests that come from my domain (boulderrides.cc)
+  // Tiles should be cached in the user's browser after the first load. But it seems only lasts 4 hours! 
+  // The API key below is locked to requests that come from the boulderrides.cc domain
   const maptilerAttribution = '&copy; <a href="https://www.maptiler.com/">MapTiler</a> &copy; <a href="https://www.openmaptiles.org/">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
   const osmAttribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
   const osmUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'; // Fallback to legacy map
   const maptilerTileUrl = 'https://api.maptiler.com/maps/outdoor/{z}/{x}/{y}.png?key=g8OdcHBJTdeo8Xdt8nLE';
 
-  // Start with MapTiler immediately so the map, calendar and rides load without delay
-  const tileLayer = L.tileLayer(maptilerTileUrl, {
+  // Create both layers (but don’t add yet)
+  const maptilerLayer = L.tileLayer(maptilerTileUrl, {
     attribution: maptilerAttribution,
     maxZoom: 19
-  }).addTo(map);
+  });
 
-  // In the background, test one tile to verify the key is valid and quota not exceeded
+  const osmLayer = L.tileLayer(osmUrl, {
+    attribution: osmAttribution,
+    maxZoom: 19
+  });
+
+  // Fallback if MapTiler fails (quota exceeded, bad key, etc.)
   // If it fails, silently swap the tile layer to OSM without affecting the rest of the map
-  fetch('https://api.maptiler.com/maps/outdoor/1/0/0.png?key=g8OdcHBJTdeo8Xdt8nLE') // This adds one extra tile request (zoom level 1 tile) on every page load to test the Maptiles access
+  fetch('https://api.maptiler.com/maps/outdoor/0/0/0.png?key=g8OdcHBJTdeo8Xdt8nLE', { // This adds one extra tile request (zoom level 0 tile) on every page load to test the Maptiles access
+    method: 'HEAD' // faster, no image download
+  })
     .then(res => {
-      if (!res.ok) throw new Error('MapTiler returned: ' + res.status);
+      if (!res.ok) throw new Error();
+
       console.log('MapTiler: OK');
+      maptilerLayer.addTo(map);
     })
     .catch(() => {
       console.warn('MapTiler unavailable, falling back to OpenStreetMap');
-      tileLayer.remove(); // Completely remove the failed MapTiler layer
-      L.tileLayer(osmUrl, { // Add a fresh OSM layer
-        attribution: osmAttribution,
-        maxZoom: 19
-      }).addTo(map);
-      map.attributionControl.removeAttribution(maptilerAttribution);
+      osmLayer.addTo(map);
+
+      map.attributionControl.setPrefix('');
       map.attributionControl.addAttribution(osmAttribution);
     });
 
