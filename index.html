@@ -8,6 +8,12 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+  <!-- Favicon -->
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png">
+
   <!-- Leaflet CSS -->
   <!-- If a future version breaks the map, use this link instead: https://unpkg.com/leaflet@1.9.4/dist/leaflet.css --> 
   <link
@@ -321,11 +327,17 @@
     }
   });
   
-  // Original OpenStreetMap
+  // Legacy OpenStreetMap
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     maxZoom: 19
   }).addTo(map);
+  
+  // Esri World Topo Map (new)
+  //L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+  //  attribution: '&copy; <a href="https://www.esri.com/">Esri</a>',
+  //  maxZoom: 19
+  //}).addTo(map);
 
   // -------------------------------
   // Load routes from club_rides.json
