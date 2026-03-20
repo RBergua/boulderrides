@@ -49,7 +49,12 @@
       background-color: #e6e6e6; /* gray background for days with rides */
     }
     .ride-tooltip {
-      font-size: 1.5em; /* font size for tooltips */
+      border-radius: 12px; /* rounded corners */
+      padding: 16px 20px;
+      box-shadow: 0 -4px 24px rgba(0,0,0,0.18);
+      border: none;
+      background: white;
+      min-width: 200px;
     }
     .day-name { font-weight: bold; }
     .day-date { font-size: 0.85em; color: gray; }
@@ -326,18 +331,26 @@
       map.eachLayer(l => { if (l.closeTooltip) l.closeTooltip(); });
     }
   });
-  
-  // Legacy OpenStreetMap
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+
+  // Try MapTiler first, fall back to OSM if tiles fail
+  // We have 5,000 sessions and 100,000 requests/month for free (https://www.maptiler.com/pricing/)
+  // The key below is linked to requests that come from my domain (boulderrides.cc)
+  const maptilerAttribution = '&copy; <a href="https://www.maptiler.com/">MapTiler</a> &copy; <a href="https://www.openmaptiles.org/">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+  const osmAttribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+  const osmUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'; // Fallback to legacy map
+
+  const maptilerLayer = L.tileLayer('https://api.maptiler.com/maps/outdoor/{z}/{x}/{y}.png?key=g8OdcHBJTdeo8Xdt8nLE', {
+    attribution: maptilerAttribution,
     maxZoom: 19
   }).addTo(map);
-  
-  // Esri World Topo Map (new)
-  //L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
-  //  attribution: '&copy; <a href="https://www.esri.com/">Esri</a>',
-  //  maxZoom: 19
-  //}).addTo(map);
+
+  // If MapTiler fails to load (e.g., we exceed free quota), switch entirely to OpenStreetMap (no API key required)
+  maptilerLayer.on('tileerror', function() {
+    console.warn('MapTiler tile failed, switching to OpenStreetMap fallback');
+    maptilerLayer.setUrl(osmUrl);
+    map.attributionControl.removeAttribution(maptilerAttribution);
+    map.attributionControl.addAttribution(osmAttribution);
+  });
 
   // -------------------------------
   // Load routes from club_rides.json
@@ -447,6 +460,7 @@
     // Collect all polylines
     const fg = L.featureGroup().addTo(map);
 
+    const allVisibleLayers = []; // collect all desktop visible lines + markers
     routes.forEach((ride, idx) => {
       if (ride.route && ride.route.length > 0) {
         const color = colors[idx % colors.length]; // cycle colors if more routes than colors
@@ -454,10 +468,13 @@
         const rideTime = formatTime12h(ride.date.split(" ")[1]); // convert time to 12-hour format (AM/PM)
 
         // Tooltip (only shown on desktop)
-        const tooltipContent = `<b>${ride.club_name}</b><br> 
-             ${ride.title}<br>
-             ${ride.women_only ? 'Women only<br>' : ''}
-             ${rideTime}`;
+        const tooltipContent = `
+          <div style="font-size:1.6em; font-weight:700; text-transform:uppercase; color:#111; line-height:1.3; margin-bottom:6px;">${ride.club_name}</div>
+          <div style="font-size:1.4em; color:#888; margin-bottom:12px;">${ride.title}</div>
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <span style="background:#f0f6ff; color:#007bff; border:1px solid #cce0ff; border-radius:20px; padding:4px 12px; font-size:1.2em; font-weight:600;">${rideTime}</span>
+            ${ride.women_only ? '<span style="background:#f3f0ff; color:#6f42c1; border:1px solid #d0c4f7; border-radius:20px; padding:4px 12px; font-size:1.2em; font-weight:600;">Women only</span>' : ''}
+          </div>`;
 
         if (isTouchDevice) {
           // -------------------------------------------------------
@@ -487,31 +504,55 @@
         } else {
           // -------------------------------------------------------
           // DESKTOP: wide invisible hit area + visible polyline.
-          // Hover highlights the route, click opens Strava.
+          // Hover highlights the route, dims others, click opens Strava.
           // -------------------------------------------------------
 
           // Wide invisible hit area for easier hovering/clicking
           const hitArea = L.polyline(ride.route, { weight: 20, opacity: 0 }).addTo(fg);
           hitArea.bindTooltip(tooltipContent, { sticky: true, className: 'ride-tooltip' });
-          hitArea.on('mouseover', function () { visibleLine.setStyle({ weight: 7 }); });
-          hitArea.on('mouseout',  function () { visibleLine.setStyle({ weight: 4 }); });
-          hitArea.on('click', function () { if (ride.url) window.open(ride.url, '_blank', 'noopener,noreferrer'); });
 
           // Visible polyline
           const visibleLine = L.polyline(ride.route, { color: color, weight: 4, opacity: 0.8 }).addTo(fg);
           visibleLine.bindTooltip(tooltipContent, { sticky: true, className: 'ride-tooltip' });
-          visibleLine.on('mouseover', function () { this.setStyle({ weight: 7 }); });
-          visibleLine.on('mouseout',  function () { this.setStyle({ weight: 4 }); });
-          visibleLine.on('click', function () { if (ride.url) window.open(ride.url, '_blank', 'noopener,noreferrer'); });
 
           // Start marker
           const start = ride.starting_location || ride.route[0];
           const marker = L.circleMarker(start, { radius: 6, color: color, fillColor: color, fillOpacity: 1 }).addTo(fg);
           marker.bindTooltip(tooltipContent, { sticky: true, className: 'ride-tooltip' });
-          marker.on('mouseover', function () { this.setStyle({ weight: 3 }); });
-          marker.on('mouseout',  function () { this.setStyle({ weight: 1 }); });
-          marker.on('click', function () { if (ride.url) window.open(ride.url, '_blank', 'noopener,noreferrer'); });
-        }
+
+          // Store for cross-route dimming (including color for restoration)
+          allVisibleLayers.push({ visibleLine, marker, color });
+          const onOver = () => {
+            visibleLine.setStyle({ weight: 7, opacity: 1 });
+            marker.setStyle({ weight: 3, fillOpacity: 1, opacity: 1 });
+            // Turn all other routes gray
+            allVisibleLayers.forEach(l => {
+              if (l.visibleLine !== visibleLine) {
+                l.visibleLine.setStyle({ opacity: 0.5, weight: 3, color: 'gray' });
+                l.marker.setStyle({ fillOpacity: 0.5, opacity: 0.5, color: 'gray', fillColor: 'gray' });
+              }
+            });
+          };
+
+          const onOut = () => {
+            // Restore all routes to their original color
+            allVisibleLayers.forEach(l => {
+              l.visibleLine.setStyle({ weight: 4, opacity: 0.8, color: l.color });
+              l.marker.setStyle({ fillOpacity: 1, opacity: 1, weight: 1, color: l.color, fillColor: l.color });
+            });
+          };
+          hitArea.on('mouseover', onOver);
+          hitArea.on('mouseout',  onOut);
+          hitArea.on('click', () => { if (ride.url) window.open(ride.url, '_blank', 'noopener,noreferrer'); });
+                  
+          visibleLine.on('mouseover', onOver);
+          visibleLine.on('mouseout',  onOut);
+          visibleLine.on('click', () => { if (ride.url) window.open(ride.url, '_blank', 'noopener,noreferrer'); });
+                  
+          marker.on('mouseover', onOver);
+          marker.on('mouseout',  onOut);
+          marker.on('click', () => { if (ride.url) window.open(ride.url, '_blank', 'noopener,noreferrer'); });
+        }          
       }
     });
 
