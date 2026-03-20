@@ -175,11 +175,11 @@
     #sheet-strava-btn:active { background: #e04400; transform: scale(0.98); }
     #sheet-strava-btn.no-url { background: #ccc; cursor: default; }
 
-    /* Info button and map attributionhides behind sheet when open */
+    /* Info button and map attribution hides behind sheet when open */
     @media (pointer: coarse) {
       #info-btn { transition: background 0.2s, bottom 0.3s ease; }
       #info-btn.sheet-open { opacity: 0; pointer-events: none; }
-      .leaflet-control-attribution { transition: opacity 0.3s ease; }
+      .leaflet-control-attribution { transition: opacity 0.3s ease; font-size: 11px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: calc(100vw - 20px); }
       .leaflet-control-attribution.hidden { opacity: 0; pointer-events: none; }
     }
     /* Hide sheet entirely on desktop */
@@ -339,11 +339,11 @@
   // The tile requests per user around ~25 tiles.
   // MapTiler is heavier than OSM, but has terrain shading, trail detail, and topographic richness.
   // Tiles should be cached in the user's browser after the first load. But it seems only lasts 4 hours! 
-  // The API key below is locked to requests that come from the boulderrides.cc domain
+  const MAPTILER_API_KEY = 'g8OdcHBJTdeo8Xdt8nLE'; // This API key is locked to requests that come from the boulderrides.cc domain
   const maptilerAttribution = '&copy; <a href="https://www.maptiler.com/">MapTiler</a> &copy; <a href="https://www.openmaptiles.org/">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
   const osmAttribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
   const osmUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'; // Fallback to legacy map
-  const maptilerTileUrl = 'https://api.maptiler.com/maps/outdoor/{z}/{x}/{y}.png?key=g8OdcHBJTdeo8Xdt8nLE';
+  const maptilerTileUrl = `https://api.maptiler.com/maps/outdoor/{z}/{x}/{y}.png?key=${MAPTILER_API_KEY}`;
 
   // Create both layers (but don’t add yet)
   const maptilerLayer = L.tileLayer(maptilerTileUrl, {
@@ -358,7 +358,7 @@
 
   // Fallback if MapTiler fails (quota exceeded, bad key, etc.)
   // If it fails, silently swap the tile layer to OSM without affecting the rest of the map
-  fetch('https://api.maptiler.com/maps/outdoor/0/0/0.png?key=g8OdcHBJTdeo8Xdt8nLE', { // This adds one extra tile request (zoom level 0 tile) on every page load to test the Maptiles access
+  fetch(`https://api.maptiler.com/maps/outdoor/0/0/0.png?key=${MAPTILER_API_KEY}`, { // This adds one extra tile request (zoom level 0 tile) on every page load to test the Maptiles access
     method: 'HEAD' // faster, no image download
   })
     .then(res => {
