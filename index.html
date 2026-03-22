@@ -341,8 +341,10 @@
   // MapTiler: We have 5,000 sessions and 100,000 requests/month for free (https://www.maptiler.com/pricing/)
   // The tile requests per user around ~25 tiles.
   // MapTiler is heavier than OSM, but has terrain shading, trail detail, and topographic richness.
-  // Tiles should be cached in the user's browser after the first load. But it seems only lasts 4 hours! 
-  const MAPTILER_API_KEY = 'g8OdcHBJTdeo8Xdt8nLE'; // This API key is locked to requests that come from the boulderrides.cc domain
+  // Tiles should be cached in the user's browser after the first load. But they only last 8 hours per user (MapTiler's Cache-Control).
+  // We use a strategy (Service Worker [sw.js]) to extend the tiles in cache from 8 hours to 90 days and save MapTiler API requests.
+  const ENABLE_CACHE_MAPTILER = true; // Set to false to disable caching
+  const MAPTILER_API_KEY = 'g8OdcHBJTdeo8Xdt8nLE'; // This API key is locked to requests that come from the boulderrides.cc domain. Use a general key for local testing in localhost.
   const maptilerAttribution = '&copy; <a href="https://www.maptiler.com/">MapTiler</a> &copy; <a href="https://www.openmaptiles.org/">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
   const osmAttribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
   const osmUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'; // Fallback to legacy map
@@ -374,6 +376,24 @@
       console.warn('MapTiler unavailable, falling back to OpenStreetMap');
       osmLayer.addTo(map);
     });
+
+  // Service Worker (SW): extends MapTiler tile cache from 8 hours to 90 days.
+  // The browser installs sw.js silently on first visit and serves cached tiles on every return visit, saving API requests. See sw.js for full details.
+  // In the first visit, the user should experience identical speed. The SW installs silently in the background while the page loads normally.
+  // For successive visits, it should feel faster. Tiles are served from the device's own disk instead of internet (MapTiler's servers and back).
+  // The disk space taken for a normal session is around 1–4 MB per user. 
+  // Setting ENABLE_CACHE_MAPTILER to false will actively unregister the SW from the user's browser on their next visit, cleanly disabling caching.
+  if ('serviceWorker' in navigator) {
+    if (ENABLE_CACHE_MAPTILER) {
+      navigator.serviceWorker.register('/sw.js')
+        .then(() => console.log('Service Worker registered: tiles cached for 90 days'))
+        .catch(err => console.warn('Service Worker registration failed:', err));
+    } else {
+      navigator.serviceWorker.getRegistrations()
+        .then(regs => regs.forEach(reg => reg.unregister()))
+        .then(() => console.log('Service Worker unregistered: caching disabled'));
+    }
+  }
 
   // -------------------------------
   // Load routes from club_rides.json
