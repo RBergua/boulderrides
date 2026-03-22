@@ -195,8 +195,8 @@
 <div id="calendar"></div>
 <div id="map"></div>
 
-<!-- Help button (previously named "Info") -->
-<button id="info-btn" onclick="document.getElementById('info-page').classList.add('open')">Help</button>
+<!-- More button (previously named "Info") -->
+<button id="info-btn" onclick="document.getElementById('info-page').classList.add('open')">More</button>
 
 <!-- Mobile bottom sheet -->
 <div id="ride-sheet">
@@ -349,6 +349,7 @@
   const maptilerAttribution = '&copy; <a href="https://www.maptiler.com/">MapTiler</a> &copy; <a href="https://www.openmaptiles.org/">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
   const osmAttribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
   const osmUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'; // Fallback to legacy map
+  // MapTiler serves 512px tiles by default (confirmed via DevTools → Preview tab).
   const maptilerTileUrl = `https://api.maptiler.com/maps/outdoor/{z}/{x}/{y}.png?key=${MAPTILER_API_KEY}`;
 
   // Create both layers (but don’t add yet)
