@@ -635,14 +635,25 @@
         // -------------------------------------------------------
         function buildVisibleLines(targetGroup, lineColor, weight, opacity) {
           if (SHOW_SURFACE) {
-            return splitBySurface(ride.route).map(seg =>
-              L.polyline(seg.latlngs, {
+            return splitBySurface(ride.route).flatMap(seg => {
+              if (seg.surface === 'unpaved') {
+                // White base line first, then colored dashes on top.
+                // If we just use dashed lines, when two unpaved segments overlap (e.g., out and back, loops...), 
+                // the two (or more) dashes would appear on top of each other and often merge into a solid line.
+                L.polyline(seg.latlngs, {
+                  color: 'white',
+                  weight: weight + 2,
+                  opacity: 1,
+                  interactive: false
+                }).addTo(targetGroup);
+              }
+              return L.polyline(seg.latlngs, {
                 color: lineColor,
                 weight,
                 opacity,
-                dashArray: seg.surface === 'unpaved' ? '3, 6' : null // dashed line for unpaved. 3, 6 makes dashes (3px line, 6px gap).
-              }).addTo(targetGroup)
-            );
+                dashArray: seg.surface === 'unpaved' ? '4, 7' : null // dashed line for unpaved. 4, 7 makes dashes (4px line, 7px gap).
+              }).addTo(targetGroup);
+            });
           } else {
             return [L.polyline(allLatLngs, { color: lineColor, weight, opacity }).addTo(targetGroup)];
           }
