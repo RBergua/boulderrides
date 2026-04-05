@@ -700,17 +700,24 @@
           // Hover on: thicken this route, gray out all others
           const onOver = () => {
             segmentLines.forEach(l => l.setStyle({ weight: 7, opacity: 1 }));
+            marker.setOpacity(1); // marker for the starting point
             allVisibleLayers.forEach(l => {
               if (l.segmentLines !== segmentLines) {
                 l.segmentLines.forEach(s => s.setStyle({ opacity: 0.5, weight: 3, color: 'gray' }));
+                if (l.color !== 'black') { // For all colors except black
+                  l.marker.getElement()?.style.setProperty('filter', 'grayscale(1) opacity(0.5)'); // grayscale(1) drains the color, opacity(0.5) dims it. This matches the feel of the grayed-out polylines
+                } else {
+                  l.marker.getElement()?.style.setProperty('filter', 'opacity(0.4)');
+                }
               }
             });
           };
 
-          // Hover off: restore all routes to their original color and weight
+          // Hover off: restore all routes and markers for the starting point to their original color and weight
           const onOut = () => {
             allVisibleLayers.forEach(l => {
               l.segmentLines.forEach(s => s.setStyle({ weight: 4, opacity: 0.8, color: l.color }));
+              l.marker.getElement()?.style.removeProperty('filter');
             });
           };
 
