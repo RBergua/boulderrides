@@ -326,7 +326,8 @@
       <span style="background:#f0f6ff; color:#007bff; border:1px solid #cce0ff; border-radius:20px; padding:5px 14px; font-size:0.88em; font-weight:500;">Boulder Triathlon Club</span>
       <span style="background:#f0f6ff; color:#007bff; border:1px solid #cce0ff; border-radius:20px; padding:5px 14px; font-size:0.88em; font-weight:500;">CyclErie</span>
       <span style="background:#f0f6ff; color:#007bff; border:1px solid #cce0ff; border-radius:20px; padding:5px 14px; font-size:0.88em; font-weight:500;">Evergreen Ride Club</span>
-      <span style="background:#f0f6ff; color:#007bff; border:1px solid #cce0ff; border-radius:20px; padding:5px 14px; font-size:0.88em; font-weight:500;">303 VELO</span>      
+      <span style="background:#f0f6ff; color:#007bff; border:1px solid #cce0ff; border-radius:20px; padding:5px 14px; font-size:0.88em; font-weight:500;">303 VELO</span>
+      <span style="background:#f0f6ff; color:#007bff; border:1px solid #cce0ff; border-radius:20px; padding:5px 14px; font-size:0.88em; font-weight:500;">Sports Garage Cycling</span>
     </div>
 
     <p style="font-size:0.8em; color:#666;">
@@ -667,11 +668,7 @@
     }
 
     // Offset starting markers that share the same starting location on the same day so they don't stack invisibly on top of each other.
-    // This is useful if there are two rides with the same route and the same starting point (not common, but possible).
-    // A small diagonal offset (~75m) is applied in opposite directions for the pair.
-    const OFFSET_LAT = 0.00048; // ~53m north/south component
-    const OFFSET_LNG = 0.00062; // ~53m east/west component (~75m diagonal at Boulder's latitude ~40°N)
-
+    // This is useful if there are two or more rides with the same starting point.
     const startKey = r => `${r.starting_location[0].toFixed(5)},${r.starting_location[1].toFixed(5)}`;
 
     const startGroups = {};
@@ -682,11 +679,23 @@
     });
 
     Object.values(startGroups).forEach(group => {
-      if (group.length !== 2) return;
-      group[0].starting_location[0] -= OFFSET_LAT;
-      group[0].starting_location[1] -= OFFSET_LNG;
-      group[1].starting_location[0] += OFFSET_LAT;
-      group[1].starting_location[1] += OFFSET_LNG;
+      if (group.length <= 1) return;
+      
+      // Offset around ~50-70 m for starting markers that share the same starting location on the same day
+      const radiusLat = 0.0005;
+      const radiusLng = 0.0007;
+
+      // Circular offset approach:
+      group.forEach((ride, i) => {
+        const angle = (2 * Math.PI * i) / group.length;
+
+      const original = ride.starting_location;
+
+      ride._offset_start = [
+        original[0] + Math.cos(angle) * radiusLat,
+        original[1] + Math.sin(angle) * radiusLng
+      ];
+      });
     });
 
     // Palette of colors (will cycle if more routes in a day than colors)
@@ -737,7 +746,7 @@
         const allLatLngs = ride.route.map(pt => [pt[0], pt[1]]);
 
         // Start marker coordinate: prefer explicit starting_location, fall back to first route point
-        const start = ride.starting_location || allLatLngs[0];
+        const start = ride._offset_start || ride.starting_location || allLatLngs[0];
 
         // Tooltip (only shown on desktop on hover)
         const tooltipContent = `
