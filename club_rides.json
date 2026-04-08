@@ -11,6 +11,8 @@
     ],
     "women_only": false,
     "route_id": 3476040299739369094,
+    "distance": 41.8,
+    "elevation_gain": 1750,
     "route": [
       [
         40.01478,
@@ -3146,6 +3148,8 @@
     ],
     "women_only": false,
     "route_id": 3439675918334287768,
+    "distance": 62.2,
+    "elevation_gain": 1943,
     "route": [
       [
         40.02018,
@@ -5236,6 +5240,8 @@
     ],
     "women_only": true,
     "route_id": 3476382989492888594,
+    "distance": 26.0,
+    "elevation_gain": 1187,
     "route": [
       [
         40.08031,
@@ -6876,6 +6882,8 @@
     ],
     "women_only": false,
     "route_id": 3475343223604328472,
+    "distance": 26.6,
+    "elevation_gain": 1391,
     "route": [
       [
         40.08031,
@@ -9033,7 +9041,7 @@
     "club_id": 761000,
     "club_name": "Ride or Die Collective",
     "title": "That Other Gravel Ride",
-    "date": "2026-04-08 17:30",
+    "date": "2026-04-15 17:30",
     "url": "https://www.strava.com/clubs/761000/group_events/3471582956211608202",
     "starting_location": [
       40.021786,
@@ -9041,6 +9049,8 @@
     ],
     "women_only": false,
     "route_id": 3476261305683186258,
+    "distance": 29.3,
+    "elevation_gain": 1104,
     "route": [
       [
         40.02152,
@@ -12581,6 +12591,8 @@
     ],
     "women_only": false,
     "route_id": 3462284451311909040,
+    "distance": 12.6,
+    "elevation_gain": 1684,
     "route": [
       [
         40.02568,
@@ -15201,6 +15213,8 @@
     ],
     "women_only": false,
     "route_id": 3476014585503869032,
+    "distance": 25.6,
+    "elevation_gain": 1517,
     "route": [
       [
         40.02568,
@@ -19931,6 +19945,8 @@
     ],
     "women_only": false,
     "route_id": 3476054945721145574,
+    "distance": 24.4,
+    "elevation_gain": 870,
     "route": [
       [
         40.02011,
@@ -21336,6 +21352,8 @@
     ],
     "women_only": false,
     "route_id": 3476208795431087214,
+    "distance": 27.6,
+    "elevation_gain": 1120,
     "route": [
       [
         40.04898,
@@ -25431,6 +25449,8 @@
     ],
     "women_only": false,
     "route_id": 3477045790325960646,
+    "distance": 53.9,
+    "elevation_gain": 2234,
     "route": [
       [
         40.08645,
@@ -27856,6 +27876,8 @@
     ],
     "women_only": false,
     "route_id": 3473457473815997068,
+    "distance": 41.4,
+    "elevation_gain": 2691,
     "route": [
       [
         40.0855,
@@ -32076,6 +32098,8 @@
     ],
     "women_only": false,
     "route_id": 3474831811974760706,
+    "distance": 51.5,
+    "elevation_gain": 7750,
     "route": [
       [
         40.02319,
@@ -44016,6 +44040,8 @@
     ],
     "women_only": false,
     "route_id": 3476268112693549234,
+    "distance": 39.8,
+    "elevation_gain": 4521,
     "route": [
       [
         40.02329,
@@ -53246,6 +53272,8 @@
     ],
     "women_only": false,
     "route_id": 3474135336380641064,
+    "distance": 23.0,
+    "elevation_gain": 774,
     "route": [
       [
         40.02319,
