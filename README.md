@@ -21,9 +21,11 @@ It aggregates **Strava club events** and displays upcoming rides by day.
 - **7-day calendar** — Quickly see which days have scheduled rides; the first day with rides loads automatically
 - **Interactive map** — Routes are drawn as color-coded polylines using [Leaflet.js](https://leafletjs.com/) with MapTiler and an automatic fallback to OpenStreetMap
 - **Paved vs unpaved surfaces** — Routes are drawn as solid lines on paved surfaces and dashed lines on unpaved surfaces
-- **Desktop** — Hover over a route to highlight it and dim the others to gray, showing the club name, ride title, start time, and whether the ride is women-only; click to open the Strava event in a new tab
-- **Mobile** — Tap a route to see its details in a bottom sheet; tap "Open in Strava" to view the event; swipe the panel down (or tap the map background) to dismiss it
+- **Start pin markers** — A colored pin marks the starting location of each ride
+- **Desktop** — Hover over a route or its start pin to highlight it and dim the others to gray, showing the club name, ride title, start time, and whether the ride is women-only; click to open the Strava event in a new tab
+- **Mobile** — Tap a route or its start pin to see its details in a bottom sheet; tap "View on Strava" to open the event; swipe the panel down (or tap the map background) to dismiss it and restore all routes
 - **Auto-fit bounds** — The map zooms to fit all routes for the selected day
+- **Progressive Web App (PWA)** — Installable on Android and iOS home screens for a full-screen, app-like experience with custom splash screens for all device sizes
 
 ## Getting Started
 
@@ -46,7 +48,7 @@ Then open [http://localhost:8000](http://localhost:8000) in your browser.
 
 ## Data Format
 
-Ride data is automatically fetched from the Strava API by a backend process that runs continuously and keeps `club_rides.json` up to date. Each entry in the array represents one ride:
+Ride data is automatically fetched from the Strava API by a backend process that runs twice a day (12 PM & 1 AM) and keeps `club_rides.json` up to date. Each entry in the array represents one ride:
 
 ```json
 [
