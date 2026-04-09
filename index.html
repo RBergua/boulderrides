@@ -565,6 +565,14 @@
     tb.className = "sheet-badge";
     tb.textContent = rideTime;
     sheetMeta.appendChild(tb);
+    if (ride.distance != null || ride.elevation_gain != null) {
+      const sb = document.createElement("span");
+      sb.className = "sheet-badge";
+      const distPart  = ride.distance      != null ? `Distance: ${ride.distance.toFixed(1)} mi` : '';
+      const elevPart  = ride.elevation_gain != null ? `Elev Gain: ${ride.elevation_gain.toLocaleString()} ft` : '';
+      sb.textContent  = [distPart, elevPart].filter(Boolean).join(' | ');
+      sheetMeta.appendChild(sb);
+    }
     if (ride.women_only) {
       const wb = document.createElement("span");
       wb.className = "sheet-badge women";
@@ -761,6 +769,7 @@
           <div style="font-size:1.4em; color:#888; margin-bottom:12px;">${ride.title}</div>
           <div style="display:flex; gap:6px; flex-wrap:wrap;">
             <span style="background:#f0f6ff; color:#007bff; border:1px solid #cce0ff; border-radius:20px; padding:4px 12px; font-size:1.2em; font-weight:600;">${rideTime}</span>
+            ${(ride.distance != null || ride.elevation_gain != null) ? `<span style="background:#f0f6ff; color:#007bff; border:1px solid #cce0ff; border-radius:20px; padding:4px 12px; font-size:1.2em; font-weight:600;">${ride.distance != null ? `Distance: ${ride.distance.toFixed(1)} mi` : ''}${ride.distance != null && ride.elevation_gain != null ? ' | ' : ''}${ride.elevation_gain != null ? `Elev Gain: ${ride.elevation_gain.toLocaleString()} ft` : ''}</span>` : ''}
             ${ride.women_only ? '<span style="background:#f3f0ff; color:#6f42c1; border:1px solid #d0c4f7; border-radius:20px; padding:4px 12px; font-size:1.2em; font-weight:600;">Women only</span>' : ''}
           </div>`;
 
