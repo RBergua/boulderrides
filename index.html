@@ -1,25 +1,25 @@
-<!-- To run locally using Visual Studio Code, you can use: python -m http.server 8000, and open http://localhost:8000 -->
-<!-- It is also possible to emulate a mobile device by means of F12 in the browser and toggle device toolbar -->
-<!-- Reminder: Hard refresh (Ctrl + Shift + R on Windows/Linux, Cmd + Shift + R on Mac) forces the browser to re-download all files instead of using cached versions. -->
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta name="description" content="Find every group ride in Boulder County on one interactive map, updated twice daily from Strava.">
+  <!-- Dev notes: python -m http.server 8000 → http://localhost:8000
+       Mobile emulation: F12 → toggle device toolbar
+       Hard refresh: Ctrl+Shift+R (Win/Linux) · Cmd+Shift+R (Mac) -->
+
+  <!-- Character encoding -->
+  <meta charset="utf-8">
+
+  <!-- Page identity -->
   <title>Boulder Group Rides – All clubs, one map</title>
-  <meta charset="utf-8" />
+  <meta name="description" content="Find every group ride in Boulder County on one interactive map, updated twice daily from Strava.">
+
+  <!-- Viewport -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- Progressive Web App (Android) to feel like an app-->
+  <!-- Progressive Web App to feel like an app-->
   <link rel="manifest" href="/manifest.json">
-
-  <!-- Enable standalone app mode -->
-  <meta name="mobile-web-app-capable" content="yes"> <!-- Android (legacy) -->
+  <meta name="mobile-web-app-capable" content="yes"> <!-- Android -->
   <meta name="apple-mobile-web-app-capable" content="yes"> <!-- iOS -->
-
-  <!-- App name (iOS home screen) -->
   <meta name="apple-mobile-web-app-title" content="Boulder Rides">
-
-  <!-- Status bar -->
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
 
   <!-- Favicon -->
@@ -150,7 +150,6 @@
       padding: 8px 16px;
       min-width: 72px;  /* Forces "More" to match "Metric" width */
       font-size: 0.9em;
-      font-family: Arial, sans-serif;
       font-weight: bold;
       cursor: pointer;
       box-shadow: 0 2px 8px rgba(0,0,0,0.25);
@@ -170,7 +169,6 @@
       padding: 8px 16px;
       min-width: 72px;  /* Matches "More" button width */
       font-size: 0.9em;
-      font-family: Arial, sans-serif;
       font-weight: bold;
       cursor: pointer;
       box-shadow: 0 2px 8px rgba(0,0,0,0.25);
@@ -215,7 +213,6 @@
       border-radius: 20px;
       padding: 7px 16px;
       font-size: 0.9em;
-      font-family: Arial, sans-serif;
       font-weight: bold;
       cursor: pointer;
       box-shadow: 0 2px 8px rgba(0,0,0,0.2);
@@ -780,8 +777,14 @@
       });
     });
 
-    // Palette of colors (will cycle if more routes in a day than colors)
-    const colors = ['blue', 'red', 'green', 'black', 'brown', '#ff7f0e', 'purple'];
+    // Palette of colors for regular rides (will cycle if more routes in a day than colors)
+    const colors = ['blue', 'red', 'green', 'black', 'brown', '#ff7f0e'];
+    // Nicer colors to consider in the future:
+    //const colors = ['#1E88E5','#E53935','#43A047','#FB8C00','#8E24AA','#6D4C41','#D81B60'];
+    // Purple shades for women-only rides (cycles if more than 3):
+    const womenColors = ['#6F42C1 ', '#AB47BC', '#8A63D2'];
+    let womenIdx = 0;
+    let regularIdx = 0;
 
     // Collect all polylines
     const fg = L.featureGroup().addTo(map);
@@ -820,7 +823,9 @@
     
     routes.forEach((ride, idx) => {
       if (ride.route && ride.route.length > 0) {
-        const color = colors[idx % colors.length]; // cycle colors if more routes than colors
+        const color = ride.women_only
+          ? womenColors[womenIdx++ % womenColors.length]
+          : colors[regularIdx++ % colors.length];
         ride.color = color; // store so openSheet can use it
         const rideTime = formatTime12h(ride.date.split(" ")[1]); // convert time to 12-hour format (AM/PM)
 
