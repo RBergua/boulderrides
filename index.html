@@ -745,6 +745,7 @@
   // Re-fetch rides from JSON file when the user brings the tab or app back to the foreground.
   let lastDataString = null; // Snapshot of the last fetched data to detect changes
   let lastFetchTime = 0; // Last time that we performed a fetch
+  let calendarAnchorDate = formatLocalDate(new Date()); // The "today" date used when the calendar was last built
   
   // Minimum time between refreshes (in ms)
   // Prevents excessive network calls when users rapidly switch tabs/apps
@@ -756,10 +757,15 @@
     if (document.visibilityState === 'visible') {
       //console.log('Tab or app became visible!'); // Testing
       const now = Date.now();
+      const todayDate = formatLocalDate(new Date());
 
-      // If we fetched club_rides.json recently, skip this refresh
-      // Avoids unnecessary repeated requests from quick tab switching
-      if (now - lastFetchTime < MIN_REFRESH_INTERVAL) return;
+      // If the calendar was built on a previous day, rebuild it now
+      // regardless of the MIN_REFRESH_INTERVAL. The day has rolled over!
+      const dayChanged = todayDate !== calendarAnchorDate;
+
+      // If we fetched club_rides.json recently and the day has not changed, 
+      // skip this refresh. This avoids unnecessary repeated requests from quick tab switching
+      if (!dayChanged && now - lastFetchTime < MIN_REFRESH_INTERVAL) return;
 
       // Update last fetch timestamp:
       lastFetchTime = now;
@@ -774,15 +780,6 @@
           // This is a simple way to detect if anything actually changed
           const newDataString = JSON.stringify(rides);
 
-          // If data hasn't changed, skip all updates (no re-render needed)
-          if (newDataString === lastDataString) {
-            //console.log('No JSON data change, skipping routes update'); // Testing
-            return;
-          }
-
-          // Save the new snapshot for future comparisons
-          lastDataString = newDataString;
-
           // Rebuild ridesByDate from scratch with fresh data
           const newRidesByDate = {};
           rides.forEach(ride => {
@@ -794,11 +791,30 @@
           // Swap only after fully built (prevents partial state issues)
           ridesByDate = newRidesByDate;
 
-          // Re-render the currently selected day
-          // This keeps the user's context intact instead of resetting the UI
-          const selected = document.querySelector('.day-column.selected');
-          if (selected?.dataset.date) loadRoutes(selected.dataset.date);
-          //console.log('Ride data refreshed'); // Testing
+          if (dayChanged) {
+            // The calendar is old (built on a previous day). We rebuild it entirely
+            // so today's column is correct.
+            calendarAnchorDate = todayDate;
+            const calendarDiv = document.getElementById("calendar");
+            calendarDiv.innerHTML = ""; // Clear old day columns
+            generateCalendar();
+            //console.log('Day changed — calendar rebuilt'); // Testing
+          } else {
+            // If data hasn't changed, skip all updates (no re-render needed)
+            if (newDataString === lastDataString) {
+              //console.log('No JSON data change, skipping routes update'); // Testing
+              return;
+            }
+ 
+            // Re-render the currently selected day
+            // This keeps the user's context intact instead of resetting the UI
+            const selected = document.querySelector('.day-column.selected');
+            if (selected?.dataset.date) loadRoutes(selected.dataset.date);
+            //console.log('Ride data refreshed'); // Testing
+          }
+ 
+          // Save the new snapshot for future comparisons
+          lastDataString = newDataString;
         })
         .catch(() => {
         // Fail silently:
