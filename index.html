@@ -339,7 +339,15 @@
 
 <!-- Day-picker calendar strip -->
 <div id="calendar"></div>
- 
+
+<!-- Event banner for special events (floats over the map, centered) -->
+ <!-- When no active banner exists in assets/banners/banner.json, this remains hidden -->
+<div id="event-banner" style="display:none; position:absolute; top:71px; left:0; right:0; z-index:500; text-align:center; pointer-events:none;">
+  <a id="event-banner-link" href="#" target="_blank" rel="noopener noreferrer" style="pointer-events:all;"></a>
+    <img id="event-banner-img" src="" alt="Event" style="display:inline-block; border-radius:8px;" />
+  </a>
+</div>
+
 <!-- Full-screen map -->
 <div id="map"></div>
  
@@ -612,6 +620,54 @@
   // Boulder, CO. Stored as [lat, lng] for readability; converted lster on to [lng, lat] for MapLibre.
   const DEFAULT_CENTER = [40.01499, -105.27055];
   const DEFAULT_ZOOM = 12;
+
+  // ── Event Banner ──────────────────────────────────────────────────────────────
+  // Reads banner.json and shows the banner only if today falls within [start, end].
+  // If the file is missing, malformed, or dates are expired → banner stays hidden.
+  // The PNG will scale to the height below at its natural width.
+  const BANNER_HEIGHT_MOBILE_PX  = 65;  // Mobile: smaller, doesn't block much of the map
+  const BANNER_HEIGHT_DESKTOP_PX = 100; // Desktop: larger, more visible on bigger screens
+
+  // Pick the right size based on whether this is a touch device
+  const BANNER_HEIGHT_PX = isTouchDevice ? BANNER_HEIGHT_MOBILE_PX : BANNER_HEIGHT_DESKTOP_PX;
+
+  (async function initBanner() {
+    try {
+      // Fetch the banner config. no-store ensures we always get the latest version.
+      const res    = await fetch('assets/banners/banner.json', { cache: 'no-store' });
+      if (!res.ok) return; // File missing or server error. Stop silently
+
+      const banner = await res.json();
+
+      // Compare today's date (midnight local time) against the banner's date window
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const start = new Date(banner.start + 'T00:00:00');
+      const end   = new Date(banner.end   + 'T00:00:00');
+
+      // If no image is defined, or we're outside the active date window we do nothing
+      if (!banner.src || today < start || today > end) return;
+
+      const wrapper = document.getElementById('event-banner');
+      const img     = document.getElementById('event-banner-img');
+      const link    = document.getElementById('event-banner-link');
+
+      // Set the image source and height. Width is natural (not stretched).
+      // To resize the banner, we should change BANNER_HEIGHT_PX above.
+      img.src             = banner.src;
+      img.style.height    = BANNER_HEIGHT_PX + 'px';
+
+      link.href           = banner.link || '#';
+      wrapper.style.display = 'block';
+
+      // Expose the banner height globally so fitBounds can add top padding,
+      // keeping routes from being drawn underneath the banner.
+      window._bannerHeightPx = BANNER_HEIGHT_PX;
+
+    } catch (e) {
+      // Fail silently — banner simply won't appear
+    }
+  })();
 
   // API key is locked to boulderrides.cc domain. Safe to expose in the frontend.
   const MAPTILER_API_KEY = 'dD2px0qif6MjSZvVnAOB';
@@ -1447,9 +1503,10 @@
       const mapEl = document.getElementById('map');
       const padX  = Math.round(mapEl.clientWidth  * 0.05);
       const padY  = Math.round(mapEl.clientHeight * 0.05);
+      const bannerPad = (window._bannerHeightPx || 0) + padY;  // If a banner is active, add its height to the top padding so routes are fitted into the visible area below the banner, not hidden underneath it.
       map.fitBounds(
         [[minLng, minLat], [maxLng, maxLat]], // [[west, south], [east, north]]
-        { padding: { top: padY, bottom: padY, left: padX, right: padX }, maxZoom: DEFAULT_ZOOM }
+        { padding: { top: bannerPad, bottom: padY, left: padX, right: padX }, maxZoom: DEFAULT_ZOOM }
       );
     }
   }
