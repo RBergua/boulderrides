@@ -358,7 +358,7 @@
 
 <!-- Races & Events button (bottom-left, between More and Metric) -->
 <button id="races-btn" class="overlay-btn"
-        onclick="document.getElementById('races-page').classList.add('open'); loadRaces()">Races</button>  <!-- Reload races on click -->
+        onclick="document.getElementById('races-page').classList.add('open'); loadRaces()">Races</button>
 
 <!-- Metric/Imperial toggle (default: imperial) -->
 <button id="metric-btn" class="overlay-btn">Metric</button>
@@ -577,17 +577,35 @@
   // -------------------------------
   // Pin marker (start point)
   // -------------------------------
-  // createPinMarker(lnglat, color)
-  // lnglat: [lng, lat] in MapLibre order.
+  // lnglat : [lng, lat] in MapLibre order
+  // color  : fill color (ignored when checkered)
+  // checkered : true for race pins — fills the pin with a B&W checkered pattern
   // Returns a maplibregl.Marker already positioned.
-  function createPinMarker(lnglat, color) {
+  function createPinMarker(lnglat, color, checkered = false) {
+    const PIN_PATH = "M12 0 C5.4 0 0 5.4 0 12 C0 21 12 32 12 32 C12 32 24 21 24 12 C24 5.4 18.6 0 12 0 Z";
+    
+    let pinContent;
+    if (checkered) { // Checkered pin for races
+      const uid = Math.random().toString(36).slice(2); // unique id so multiple pins don't share the same clipPath
+
+      const TILE = 6; // tile size for the checkered pattern; smaller tiles = more detailed pattern
+
+      let rects = "";
+
+      for (let row = 0; row < Math.ceil(32 / TILE); row++)
+        for (let col = 0; col < Math.ceil(24 / TILE); col++)
+          rects += `<rect x="${col*TILE}" y="${row*TILE}" width="${TILE}" height="${TILE}" fill="${(col+row)%2===0 ? 'white' : 'black'}"/>`;
+
+       pinContent = `<defs><clipPath id="cp-${uid}"><path d="${PIN_PATH}"/></clipPath></defs>
+          <g clip-path="url(#cp-${uid})">${rects}</g>
+          <path d="${PIN_PATH}" fill="none" stroke="white" stroke-width="1.5"/>`;
+    } else {
+      pinContent = `<path d="${PIN_PATH}" fill="${color}" stroke="white" stroke-width="1.5"/>
+        <circle cx="12" cy="12" r="5" fill="white"/>`;
+    }
+
     const el = document.createElement('div');
-    el.innerHTML = `
-      <svg width="24" height="32" viewBox="0 0 24 32" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 0 C5.4 0 0 5.4 0 12 C0 21 12 32 12 32 C12 32 24 21 24 12 C24 5.4 18.6 0 12 0 Z"
-            fill="${color}" stroke="white" stroke-width="1.5"/>
-        <circle cx="12" cy="12" r="5" fill="white"/>
-      </svg>`;
+    el.innerHTML = `<svg width="24" height="32" viewBox="0 0 24 32" xmlns="http://www.w3.org/2000/svg">${pinContent}</svg>`;
     el.style.cssText = 'cursor:pointer; width:24px; height:32px;';
     return new maplibregl.Marker({ element: el, anchor: 'bottom' }).setLngLat(lnglat);
   }
@@ -706,10 +724,14 @@
   });
 
   // -------------------------------
-  // Load routes from club_rides.json
+  // Load routes from club_rides.json and races from races.json
   // -------------------------------
   // Rides grouped by date: { "YYYY-MM-DD": [ride, ride, ...], ... }
   let ridesByDate = {};
+
+  // Races grouped by date: { "YYYY-MM-DD": [race, race, ...], ... }
+  // A multi-day race appears under each of its dates.
+  let racesByDate = {};
 
   // Loads initial rides data in parallel and plots them once map is ready
   //console.time('club_rides.json'); // Testing: check the time to load JSON data.
@@ -730,13 +752,34 @@
     }
   })();
 
+  // Flat list of all races from races.json, used by the Races page to show 2 months of events.
+  let allRaces = [];
+
+  const racesReady = (async () => {
+    const res = await fetch('races.json');
+    allRaces = await res.json();
+
+    // Group races by date (YYYY-MM-DD). A multi-day race is indexed under each of its dates.
+    for (const race of allRaces) {
+      const dates = Array.isArray(race.date) ? race.date : [race.date];
+      for (const d of dates) {
+        const iso = formatLocalDate(parseLocalDate(d));
+
+        if (!racesByDate[iso]) racesByDate[iso] = [];
+        racesByDate[iso].push(race);
+      }
+    }
+  })();
+
   // MapLibre requires addSource/addLayer after the style is ready.
   // Wait for BOTH the map style AND ride data before rendering — whichever
   // finishes last triggers generateCalendar().
   //console.time('map style'); // Testing: check the time to load the map style.
   map.on('load', () => {
     //console.timeEnd('map style'); // Testing: check the time to load the map style.
-    ridesReady.then(() => generateCalendar());
+    Promise.all([ridesReady, racesReady]).then(() => { // Wait for both to finish
+      generateCalendar();
+    });
   });
 
   // -------------------------------
@@ -1138,17 +1181,18 @@
   }
 
   // -------------------------------
-  // Route rendering
+  // Route and race rendering
   // -------------------------------
-  // Draws routes for the selected calendar date.
+  // Draws routes and race markers for the selected calendar date.
   //  Desktop: hover highlights the route + shows a tooltip, click opens Strava.
   //  Mobile:  tap highlights the route + slides up the bottom sheet.
   function loadRoutes(date) {
     if (isTouchDevice) closeSheet(); // If we're on mobile: close sheet (if it was open) when moving between days
 
-    // Debug logs to check the selected date and available rides (F12 or CTRL+SHIFT+I in browser to open console)
+    // Debug logs to check the selected date and available rides/races (F12 or CTRL+SHIFT+I in browser to open console)
     //console.log("Selected date:", date);
     //console.log("Dates with rides:", Object.keys(ridesByDate));
+    //console.log("Dates with races:", Object.keys(racesByDate));
 
     // Remove old route layers, sources, and pin markers from previous render
     map._routeMarkers?.forEach(m => m.remove());
@@ -1159,9 +1203,15 @@
     });
     map._routeLayerIds  = [];
     map._routeSourceIds = [];
- 
+
+    // Data for selected date
     const routes = ridesByDate[date] || [];
-    if (!routes.length) {
+    const races  = racesByDate[date] || [];
+
+    // Add a checkered pin for each race on this date (reuses _routeMarkers for automatic cleanup on day change)
+    races.forEach(race => map._routeMarkers.push(createPinMarker([race.longitude, race.latitude], null, true).addTo(map)));
+
+    if (!routes.length && !races.length) {
       map.jumpTo({ center: [DEFAULT_CENTER[1], DEFAULT_CENTER[0]], zoom: DEFAULT_ZOOM });
       return;
     }
@@ -1193,7 +1243,7 @@
       });
     });
 
-    // Color palettes 
+    // Color palettes
     const colors = ['blue', 'red', 'green', 'black', 'brown', '#ff7f0e'];
     // Purple shades for women-only rides (cycles if more than 3):
     const womenColors = ['#6F42C1 ', '#AB47BC', '#8A63D2'];
@@ -1422,7 +1472,7 @@
           // Tap route → bottom sheet slides up with details
 
           const { segmentLines, whitelines } = buildVisibleLines(color, 5, 0.85);
-          const hitId        = addHitLayer(40);
+          const hitId        = addHitLayer(25);
           const markerEl     = createPinMarker([start[1], start[0]], color).addTo(map);
           map._routeMarkers.push(markerEl);
           allVisibleLayers.push({ segmentLines, whitelines, marker: markerEl, color, isMobile: true });
@@ -1504,17 +1554,34 @@
         }
       });
 
-    // Fit map to routes
-    // Compute the bounding box of all route coordinates and zoom to fit with 5% padding.
+    // Fit map to routes + races
+    // Compute the bounding box of all route coordinates as well as races and zoom to fit with 5% padding.
     let minLng = Infinity, maxLng = -Infinity, minLat = Infinity, maxLat = -Infinity;
+
+    // Routes
     routes.forEach(ride => {
       ride.route?.forEach(pt => {
-        if (pt[1] < minLng) minLng = pt[1];
-        if (pt[1] > maxLng) maxLng = pt[1];
-        if (pt[0] < minLat) minLat = pt[0];
-        if (pt[0] > maxLat) maxLat = pt[0];
+        const lat = pt[0];
+        const lng = pt[1];
+
+        if (lng < minLng) minLng = lng;
+        if (lng > maxLng) maxLng = lng;
+        if (lat < minLat) minLat = lat;
+        if (lat > maxLat) maxLat = lat;
       });
     });
+
+    // Races
+    races.forEach(race => {
+      const lat = Number(race.latitude);
+      const lng = Number(race.longitude);
+
+      if (lng < minLng) minLng = lng;
+      if (lng > maxLng) maxLng = lng;
+      if (lat < minLat) minLat = lat;
+      if (lat > maxLat) maxLat = lat;
+    });
+
     if (minLng !== Infinity) {
       const mapEl = document.getElementById('map');
       const padX  = Math.round(mapEl.clientWidth  * 0.05);
@@ -1548,125 +1615,155 @@
         ${ride.women_only ? badge('Women only', 'women') : ''}
       </div>`;
   }
- 
+
   // -------------------------------
   // Load races & render Races page
   // -------------------------------
-  window.loadRaces = async function loadRaces() { // window.loadRaces in the global scope so it can be called from the button click
-    // Container where all races will be included
+  // Renders the Races page list from the already-loaded allRaces array (no extra fetch).
+  window.loadRaces = function loadRaces() { // window.loadRaces in the global scope so it can be called from the button click
     const container = document.getElementById("races-content");
-    if (!container) return; // Page not loaded or missing container element
+    if (!container) return;
 
-    try {
-      // Fetch races data from local JSON file (updated weekly from BikeReg API)
-      const res = await fetch("races.json", { cache: "no-store" }); // no-store to always get the latest version when navigating (very light file)
-      const races = await res.json();
+    // Remove only previously-rendered race entries
+    container.querySelectorAll(".race-entry").forEach(el => el.remove());
 
-      container.querySelectorAll("div").forEach(el => el.remove()); // clear old race entries before re-rendering, so clicking Races a second time doesn't duplicate the list.
+    // Get today's date for filtering. Avoid showing past races
+    const today = new Date();
+    today.setHours(0,0,0,0);
 
-      // In case there are no races available.
-      if (!races || races.length === 0) {
-        container.innerHTML = `
-          <p style="font-weight: 600; margin: 0;">
-            No races found.
-          </p>
-        `;
-        return;
-      }
+    // Filter races to include only upcoming events
+    const upcoming = allRaces.filter(race => {
+      // Normalize date field into an array
+      // Some races have a single date, others multiple dates
+      const dates = Array.isArray(race.date)
+        ? race.date
+        : [race.date];
 
-      // Get today's date for filtering. Avoid showing past races
-      const today = new Date();
-      today.setHours(0,0,0,0);
+      // Keep race if ANY race date is today or later
+      return dates.some(d => parseLocalDate(d) >= today);
+    });
 
-      // Helper: format date as "April 26, 2026"
-      const formatDate = (dateStr) => {
-        const [y, m, d] = dateStr.split("-").map(Number);
-        const date = new Date(y, m - 1, d);
+    // Show fallback message if no upcoming races exist
+    if (!upcoming.length) {
+      const empty = document.createElement("p");
 
-        return date.toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "long",
-          day: "numeric"
-        });
-      };
+      empty.className = "race-entry";
+      empty.style.fontWeight = "600";
+      empty.textContent = "No races found.";
 
-      // Loop through
-      races.forEach(race => {
-
-        // Handle single or multi-day dates
-        const dates = Array.isArray(race.date) ? race.date : [race.date];
-
-        // Skip if ALL dates are in the past.
-        // Parse as local date (split into parts) to avoid UTC-vs-local timezone shifts that can cause a race dated "today" to appear as yesterday.
-        const parseLocalDate = (str) => {
-          const [y, m, d] = str.split("-").map(Number);
-          return new Date(y, m - 1, d);
-        };
-        if (dates.every(d => parseLocalDate(d) < today)) return;
-
-        // Build date display
-        let dateText;
-        if (dates.length === 1) {
-          dateText = formatDate(dates[0]);
-        } else {
-          dateText = `${formatDate(dates[0])} – ${formatDate(dates[dates.length - 1])}`;
-        }
-
-        // Google Maps link
-        const mapsLink = `https://www.google.com/maps?q=${race.latitude},${race.longitude}`;
-
-        const div = document.createElement("div");
-
-        div.innerHTML = `
-          <!-- Race name -->
-          <p style="margin: 0 0 0px; font-weight: 600;">
-            <a href="${race.url}" target="_blank" rel="noopener noreferrer">${race.name}</a>
-          </p>
-
-          <!-- Type (subtext under name) -->
-          <p style="margin: 0 0 4px; font-size: 0.7em; color: #888;">
-            ${Array.isArray(race.type) ? race.type.join(", ") : race.type || "Unknown"}
-          </p>
-
-          <!-- Indented details block -->
-          <div style="margin-left: 12px;">
-
-            <!-- Date -->
-            <p style="margin: 0 0 6px; font-weight: 600;">
-              📅 ${dateText}
-            </p>
-
-            <!-- Location -->
-            <p style="margin: 0 0 4px; font-size: 0.9em;">
-              📍 
-              <a href="${mapsLink}" target="_blank" rel="noopener noreferrer">
-                ${race.location}
-              </a>
-            </p>
-
-            <!-- Register -->
-            <p style="margin: 0 0 10px; font-size: 0.9em;">
-              📝 
-              <a href="${race.reg_link}" target="_blank" rel="noopener noreferrer">
-                Register
-              </a>
-            </p>
-
-          </div>
-
-          <hr>
-        `;
-
-        container.appendChild(div);
-      });
-
-      document.getElementById("bikereg-attribution").style.display = "block"; // Show BikeReg logo after loading the list of races
-
-    } catch (err) {
-      console.error("Failed to load races:", err);
+      container.appendChild(empty);
+      return;
     }
 
+    // Build and append a card for each race
+    upcoming.forEach(race => {
+      container.appendChild(buildRaceCard(race));
+    });
+
+    // Show BikeReg attribution after races load
+    document.getElementById("bikereg-attribution").style.display = "block";
   };
+
+  // -------------------------------
+  // Convert YYYY-MM-DD string into local Date object
+  // -------------------------------
+  function parseLocalDate(str) {
+    // Split string into numeric year/month/day parts
+    const [y, m, d] = str.split("-").map(Number);
+
+    // Month is zero-indexed in JavaScript Date
+    return new Date(y, m - 1, d);
+  }
+
+  // -------------------------------
+  // Format date for display
+  // Example:
+  // 2026-05-06 -> May 6, 2026
+  // -------------------------------
+  function formatDate(dateStr) {
+    return parseLocalDate(dateStr).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric"
+    });
+  }
+
+  // -------------------------------
+  // Build a single race card element
+  // -------------------------------
+  function buildRaceCard(race) {
+    // Normalize race dates into array
+    const dates = Array.isArray(race.date)
+      ? race.date
+      : [race.date];
+
+    // Build date display text
+    // Single-day race:
+    //   May 6, 2026
+    //
+    // Multi-day race:
+    //   May 6, 2026 – May 8, 2026
+    const dateText = dates.length === 1
+      ? formatDate(dates[0])
+      : `${formatDate(dates[0])} – ${formatDate(dates.at(-1))}`;
+
+    // Generate Google Maps search link
+    const mapsLink =
+      `https://www.google.com/maps?q=${race.latitude},${race.longitude}`;
+
+    // Create race wrapper element
+    const div = document.createElement("div");
+
+    // Used later for cleanup when re-rendering
+    div.className = "race-entry";
+
+    // Build race card HTML
+    div.innerHTML = `
+      <!-- Race name -->
+      <p style="margin:0; font-weight:600;">
+        <a href="${race.url}" target="_blank" rel="noopener noreferrer">
+          ${race.name}
+        </a>
+      </p>
+
+      <!-- Race type/categories -->
+      <p style="margin:0 0 4px; font-size:0.7em; color:#888;">
+        ${Array.isArray(race.type)
+          ? race.type.join(", ")
+          : race.type || "Unknown"}
+      </p>
+
+      <div style="margin-left:12px;">
+
+        <!-- Race date -->
+        <p style="margin:0 0 6px; font-weight:600;">
+          📅 ${dateText}
+        </p>
+
+        <!-- Race location -->
+        <p style="margin:0 0 4px; font-size:0.9em;">
+          📍
+          <a href="${mapsLink}" target="_blank" rel="noopener noreferrer">
+            ${race.location}
+          </a>
+        </p>
+
+        <!-- Registration link -->
+        <p style="margin:0 0 10px; font-size:0.9em;">
+          📝
+          <a href="${race.reg_link}" target="_blank" rel="noopener noreferrer">
+            Register
+          </a>
+        </p>
+      </div>
+
+      <!-- Divider between races -->
+      <hr>
+    `;
+
+    // Return completed race card element
+    return div;
+  }
 
   // -------------------------------
   // Generate 7-day calendar
@@ -1678,7 +1775,7 @@
          String(date.getDate()).padStart(2,'0');
   }
   
-  // Builds the 7-day calendar strip, then auto-selects the first day with rides.
+  // Builds the 7-day calendar strip, then auto-selects the first day with rides or races.
   function generateCalendar() {
     const calendarDiv = document.getElementById("calendar");
     const today       = new Date();
@@ -1691,9 +1788,10 @@
       date.setDate(today.getDate() + i);
       const isoDate = formatLocalDate(date);
       const rides   = ridesByDate[isoDate] || [];
+      const races   = racesByDate[isoDate] || [];
  
       const col     = document.createElement("div");
-      col.className = "day-column" + (rides.length ? " ride-day" : "");
+      col.className = "day-column" + ((rides.length || races.length) ? " ride-day" : "");
       col.dataset.date = isoDate;
  
       // Day-name label (e.g. "MON")
@@ -1710,10 +1808,10 @@
       col.onclick = () => {
         document.querySelectorAll('.day-column').forEach(el => el.classList.remove('selected'));
         col.classList.add('selected');
-        loadRoutes(isoDate); // For a given day, this re-calls loadRoutes() and buildSegments() that includes the paved/unpaved logic. But it's a vey fast operation (small dataset).
+        loadRoutes(isoDate); // For a given day, this re-calls loadRoutes() and buildSegments() that includes the paved/unpaved logic. But it's a very fast operation (small dataset).
       };
  
-      if (!firstRideDate && rides.length) {
+      if (!firstRideDate && (rides.length || races.length)) {
         firstRideDate = isoDate;
         firstRideCol  = col;
       }
