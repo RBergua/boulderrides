@@ -196,11 +196,7 @@
     #info-content, #races-content {
       max-width: 640px;
       margin: 0 auto;
-      padding: 60px 24px 48px;
-    }
-
-    #info-content, #races-content {
-      padding-bottom: 0;
+      padding: 60px 24px 0;
     }
 
     /* Close button: always visibe in the top-right corner */
@@ -285,11 +281,23 @@
     .maplibregl-canvas:focus { outline: none; }
 
     /* MapLibre popup: transparent wrapper so only our inner HTML is visible (no rectangle) */
+    /* z-index must exceed the event banner (500), if there is any, so the tooltip appears on top of it */
+    .maplibregl-popup {
+      z-index: 600;
+    }
     .maplibregl-popup-content {
       background: transparent !important;
       box-shadow: none !important;
       border: none !important;
       padding: 0 !important;
+    }
+
+    /* Highlighted race card (when opened via map pin click) */
+    .race-entry.highlighted {
+      background: #f0f0f0;
+      border-radius: 8px;
+      padding: 5px;
+      margin: -8px;
     }
 
     /* Desktop hover tooltip card */
@@ -344,7 +352,7 @@
  <!-- When no active banner exists in assets/banners/banner.json, this remains hidden -->
 <div id="event-banner" style="display:none; position:absolute; top:71px; left:0; right:0; z-index:500; text-align:center; pointer-events:none;">
   <a id="event-banner-link" href="#" target="_blank" rel="noopener noreferrer" style="pointer-events:all;"></a>
-    <img id="event-banner-img" src="" alt="Event" style="display:inline-block; border-radius:8px;" />
+    <img id="event-banner-img" src="" alt="Event" style="display:inline-block; border-radius:6px;" />
   </a>
 </div>
 
@@ -507,7 +515,7 @@
 
 <!-- Full-screen Races & Events page -->
 <div id="races-page">
-  <button id="races-close" onclick="document.getElementById('races-page').classList.remove('open')">✕ Close</button>
+  <button id="races-close" onclick="document.getElementById('races-page').classList.remove('open'); document.querySelectorAll('.race-entry.highlighted').forEach(el => el.classList.remove('highlighted'))">✕ Close</button>
 
   <div id="races-content">
 
@@ -520,7 +528,7 @@
       Some major events (e.g., Triple Bypass, Mt. Blue Sky Hill Climb) are not listed in <a href="https://www.bikereg.com" target="_blank" rel="noopener noreferrer">bikereg.com</a> and are hardcoded in the backend process.
     </p>
 
-    <hr>
+    <hr class="static">
   </div>
   
   <!-- BikeReg attribution: outside races-content so it renders after the dynamically appended race entries -->
@@ -598,15 +606,15 @@
 
        pinContent = `<defs><clipPath id="cp-${uid}"><path d="${PIN_PATH}"/></clipPath></defs>
           <g clip-path="url(#cp-${uid})">${rects}</g>
-          <path d="${PIN_PATH}" fill="none" stroke="white" stroke-width="1.5"/>`;
+          <path d="${PIN_PATH}" fill="none" stroke="black" stroke-width="2"/>`;
     } else {
       pinContent = `<path d="${PIN_PATH}" fill="${color}" stroke="white" stroke-width="1.5"/>
         <circle cx="12" cy="12" r="5" fill="white"/>`;
     }
 
     const el = document.createElement('div');
-    el.innerHTML = `<svg width="24" height="32" viewBox="0 0 24 32" xmlns="http://www.w3.org/2000/svg">${pinContent}</svg>`;
-    el.style.cssText = 'cursor:pointer; width:24px; height:32px;';
+    el.innerHTML = `<svg width="24" height="32" viewBox="-1 -1 26 34" xmlns="http://www.w3.org/2000/svg">${pinContent}</svg>`;
+    el.style.cssText = 'cursor:pointer; width:24px; height:32x;';
     return new maplibregl.Marker({ element: el, anchor: 'bottom' }).setLngLat(lnglat);
   }
 
@@ -813,13 +821,15 @@
       // Update last fetch timestamp:
       lastFetchTime = now;
 
-      // Fetch the latest JSON data
+      // Fetch the latest rides and races JSON data in parallel
       // cache: 'no-store' ensures we bypass browser/PWA caching for the JSON file with the routes
-      fetch('club_rides.json', { cache: 'no-store' })
-        .then(r => r.json())
-        .then(rides => {
+      Promise.all([
+        fetch('club_rides.json', { cache: 'no-store' }).then(r => r.json()),
+        fetch('races.json').then(r => r.json())
+      ])
+        .then(([rides, races]) => {
 
-          // Convert data to a string so we can compare with previous version
+          // Convert rides data to a string so we can compare with previous version
           // This is a simple way to detect if anything actually changed
           const newDataString = JSON.stringify(rides);
 
@@ -831,8 +841,20 @@
             newRidesByDate[date].push(ride);
           });
 
+          // Rebuild racesByDate and allRaces from scratch with fresh data
+          const newRacesByDate = {};
+          races.forEach(race => {
+            const dates = Array.isArray(race.date) ? race.date : [race.date];
+            dates.forEach(date => {
+              if (!newRacesByDate[date]) newRacesByDate[date] = [];
+              newRacesByDate[date].push(race);
+            });
+          });
+
           // Swap only after fully built (prevents partial state issues)
           ridesByDate = newRidesByDate;
+          racesByDate = newRacesByDate;
+          allRaces    = races;
 
           if (dayChanged) {
             // The calendar is old (built on a previous day). We rebuild it entirely
@@ -861,7 +883,7 @@
         })
         .catch(() => {
         // Fail silently:
-        // - Keep existing ridesByDate
+        // - Keep existing ridesByDate / racesByDate
         // - Do not interrupt the user experience
         // - Next visibility event will try again
       });
@@ -937,7 +959,6 @@
  
     sheet.classList.add("open");
     requestAnimationFrame(() => {
-      document.documentElement.style.setProperty("--sheet-height", sheet.offsetHeight + "px");
       infoBtnEl.classList.add("sheet-open");
       racesBtnEl.classList.add("sheet-open");
       metricBtn.classList.add("sheet-open");
@@ -1202,14 +1223,39 @@
       if (map.getSource(id))  map.removeSource(id);
     });
     map._routeLayerIds  = [];
-    map._routeSourceIds = [];
 
     // Data for selected date
     const routes = ridesByDate[date] || [];
     const races  = racesByDate[date] || [];
 
     // Add a checkered pin for each race on this date (reuses _routeMarkers for automatic cleanup on day change)
-    races.forEach(race => map._routeMarkers.push(createPinMarker([race.longitude, race.latitude], null, true).addTo(map)));
+    // Multiple races can share the same location — group them by latlng so one pin click highlights all of them.
+    const racesByLocation = {};
+    races.forEach(race => {
+      const key = `${race.latitude},${race.longitude}`;
+      if (!racesByLocation[key]) racesByLocation[key] = [];
+      racesByLocation[key].push(race.name);
+    });
+
+    Object.entries(racesByLocation).forEach(([latlng, names]) => {
+      const [lat, lng] = latlng.split(",").map(Number);
+      const marker = createPinMarker([lng, lat], null, true);
+      marker.getElement().addEventListener('click', () => {
+        document.getElementById('races-page').classList.add('open');
+        loadRaces();
+        // Wait one frame for loadRaces() to finish rendering the cards before highlighting
+        requestAnimationFrame(() => {
+          names.forEach(name => {
+            const card = document.querySelector(`.race-entry[data-race-name="${CSS.escape(name)}"]`);
+            if (card) card.classList.add('highlighted');
+          });
+          // Scroll the first highlighted card into view
+          const first = document.querySelector('.race-entry.highlighted');
+          if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
+      });
+      map._routeMarkers.push(marker.addTo(map));
+    });
 
     if (!routes.length && !races.length) {
       map.jumpTo({ center: [DEFAULT_CENTER[1], DEFAULT_CENTER[0]], zoom: DEFAULT_ZOOM });
@@ -1338,221 +1384,191 @@
       const start      = ride._offset_start || ride.starting_location || allLatLngs[0];
       const rideTime   = formatTime12h(ride.date.split(" ")[1]);
 
-      // addPolylineLayer
-      // Registers one GeoJSON source + line layer on the map.
-      // @param {[number, number][]} coords — [lng, lat] pairs (MapLibre order)
-      // @param {{ color, weight, opacity, dashArray?, beforeId? }} opts
-      // @returns {string} the new layer ID
-        function addPolylineLayer(coords, opts) {
-          const id = nextLayerId();
-          map.addSource(id, {
-            type: 'geojson',
-            data: { type: 'Feature', geometry: { type: 'LineString', coordinates: coords } }
-          });
-          map.addLayer({
-            id: id,
-            type: 'line', source: id,
-            layout: { 'line-cap':  'round', 'line-join': 'round' },
-            paint: {
-              'line-color':   opts.color,
-              'line-width':   opts.weight,
-              'line-opacity': opts.opacity,
-              ...(opts.dashArray ? { 'line-dasharray': opts.dashArray } : {})
-            }
-          }, opts.beforeId);
-          map._routeLayerIds.push(id);
-          map._routeSourceIds.push(id);
-          return id;
-        }
+      // Collects layer IDs for white base lines under unpaved dashes (used by highlight/restore)
+      const whitelines = [];
 
-        // Collects layer IDs for white base lines under unpaved dashes (used by highlight/restore)
-        const whitelines = [];
-
-        // buildVisibleLines
-        // One source per ride and 3 fixed layers per ride using filter expressions:
-        //   1. paved solid line
-        //   2. unpaved white base line (prevents dashes merging on overlapping routes)
-        //   3. unpaved dashed colored line on top
-        // @returns {{ segmentLines: string[], whitelines: string[] }}
-        function buildVisibleLines(lineColor, weight, opacity) {
-          const toML = latlngs => latlngs.map(([lat, lng]) => [lng, lat]);
-          const sourceId = nextLayerId();
+      // buildVisibleLines
+      // One source per ride and 3 fixed layers per ride using filter expressions:
+      //   1. paved solid line
+      //   2. unpaved white base line (prevents dashes merging on overlapping routes)
+      //   3. unpaved dashed colored line on top
+      // @returns {{ segmentLines: string[], whitelines: string[] }}
+      function buildVisibleLines(lineColor, weight, opacity) {
+        const toML = latlngs => latlngs.map(([lat, lng]) => [lng, lat]);
+        const sourceId = nextLayerId();
  
-          if (!SHOW_SURFACE) {
-            // Single source + single layer for the whole route
-            map.addSource(sourceId, {
-              type: 'geojson',
-              data: { type: 'Feature', geometry: { type: 'LineString', coordinates: toML(allLatLngs) } }
-            });
-            const layerId = nextLayerId();
-            map.addLayer({
-              id: layerId, type: 'line', source: sourceId,
-              layout: { 'line-cap': 'round', 'line-join': 'round' },
-              paint: { 'line-color': lineColor, 'line-width': weight, 'line-opacity': opacity }
-            });
-            map._routeLayerIds.push(sourceId, layerId);
-            map._routeSourceIds.push(sourceId);
-            return { segmentLines: [layerId], whitelines: [] };
-          }
- 
-          // Build one FeatureCollection with all segments tagged by surface type.
-          // This is a single addSource call regardless of how many segments there are in a route.
-          const segments = buildSegments(ride.route);
-          const features = segments.map(seg => ({
-            type: 'Feature',
-            properties: { surface: seg.surface },
-            geometry: { type: 'LineString', coordinates: toML(seg.latlngs) }
-          }));
- 
+        if (!SHOW_SURFACE) {
+          // Single source + single layer for the whole route
           map.addSource(sourceId, {
             type: 'geojson',
-            data: { type: 'FeatureCollection', features }
+            data: { type: 'Feature', geometry: { type: 'LineString', coordinates: toML(allLatLngs) } }
           });
-          map._routeSourceIds.push(sourceId);
- 
-          // Layer 1: paved solid line (filter: surface === 'paved')
-          const pavedId = nextLayerId();
+          const layerId = nextLayerId();
           map.addLayer({
-            id: pavedId, type: 'line', source: sourceId,
-            filter: ['==', ['get', 'surface'], 'paved'],
+            id: layerId, type: 'line', source: sourceId,
             layout: { 'line-cap': 'round', 'line-join': 'round' },
             paint: { 'line-color': lineColor, 'line-width': weight, 'line-opacity': opacity }
           });
-          map._routeLayerIds.push(pavedId);
- 
-          // Layer 2: unpaved white base line. Drawn first so colored dashes sit on top.
-          // Prevents dashes from merging into a solid line on overlapping routes.
-          const whiteId = nextLayerId();
-          map.addLayer({
-            id: whiteId, type: 'line', source: sourceId,
-            filter: ['==', ['get', 'surface'], 'unpaved'],
-            layout: { 'line-cap': 'round', 'line-join': 'round' },
-            paint: { 'line-color': 'white', 'line-width': weight, 'line-opacity': 1 }
-          });
-          map._routeLayerIds.push(whiteId);
- 
-          // Layer 3: unpaved dashed colored line on top of white base
-          const dashedId = nextLayerId();
-          map.addLayer({
-            id: dashedId, type: 'line', source: sourceId,
-            filter: ['==', ['get', 'surface'], 'unpaved'],
-            layout: { 'line-cap': 'round', 'line-join': 'round' },
-            paint: {
-              'line-color': lineColor,
-              'line-width': weight,
-              'line-opacity': opacity,
-              'line-dasharray': [2 / weight, 6 / weight]
-            }
-          });
-          map._routeLayerIds.push(dashedId);
- 
-          return { segmentLines: [pavedId, dashedId], whitelines: [whiteId] };
+          map._routeLayerIds.push(sourceId, layerId);
+          return { segmentLines: [layerId], whitelines: [] };
         }
-
-        // Hit area
-        // A wide transparent line layer placed over the route for easier
-        // clicking/tapping (finger-friendly on mobile, cursor-friendly on desktop).
-        function addHitLayer(hitWidth) {
-          const hitCoords = allLatLngs.map(([lat, lng]) => [lng, lat]);
-          const hitId = nextLayerId();
-          map.addSource(hitId, {
-            type: 'geojson',
-            data: { type: 'Feature', geometry: { type: 'LineString', coordinates: hitCoords } }
-          });
-          map.addLayer({ id: hitId, type: 'line', source: hitId,
-            paint: { 'line-color': 'transparent', 'line-width': hitWidth, 'line-opacity': 0 }
-          });
-          map._routeLayerIds.push(hitId);
-          map._routeSourceIds.push(hitId);
-          return hitId;
-        }
-
-        if (isTouchDevice) {
-          // MOBILE
-          // Tap route → bottom sheet slides up with details
-
-          const { segmentLines, whitelines } = buildVisibleLines(color, 5, 0.85);
-          const hitId        = addHitLayer(25);
-          const markerEl     = createPinMarker([start[1], start[0]], color).addTo(map);
-          map._routeMarkers.push(markerEl);
-          allVisibleLayers.push({ segmentLines, whitelines, marker: markerEl, color, isMobile: true });
-
-          // Tap handler: highlight this route, dim all others, open the bottom sheet
-          const tapHandler = e => {
-            e.originalEvent?.stopPropagation();
-            restoreAllRoutes();
-            highlightRoute(segmentLines);
-            currentHL = segmentLines;
-            openSheet(ride);
-          };
-
-          map.on('click', hitId, e => { e.originalEvent.stopPropagation(); tapHandler(e); });
-          markerEl.getElement().addEventListener('click', e => { e.stopPropagation(); tapHandler({ originalEvent: e }); });
-
-        } else {
-          // DESKTOP
-          // Hover highlights the route, dims others, click opens Strava.
-
-          const { segmentLines, whitelines } = buildVisibleLines(color, 4, 0.8);
-          const hitId        = addHitLayer(20);
-          const markerEl     = createPinMarker([start[1], start[0]], color).addTo(map);
-          map._routeMarkers.push(markerEl);
-          allVisibleLayers.push({ segmentLines, whitelines, marker: markerEl, color, isMobile: false });
-
-          // HTML injected into the hover tooltip popup
-          const tooltipContent = buildTooltipHTML(ride, rideTime);
  
-          // Opens a popup anchored to the cursor position.
-          function showPopup(lngLat) {
-            if (activePopup) activePopup.remove();
-            activePopup = new maplibregl.Popup({
-              closeButton: false, closeOnClick: false,
-              className: 'ride-tooltip', maxWidth: 'none'
-            }).setLngLat(lngLat).setHTML(tooltipContent).addTo(map);
+        // Build one FeatureCollection with all segments tagged by surface type.
+        // This is a single addSource call regardless of how many segments there are in a route.
+        const segments = buildSegments(ride.route);
+        const features = segments.map(seg => ({
+          type: 'Feature',
+          properties: { surface: seg.surface },
+          geometry: { type: 'LineString', coordinates: toML(seg.latlngs) }
+        }));
+ 
+        map.addSource(sourceId, {
+          type: 'geojson',
+          data: { type: 'FeatureCollection', features }
+        });
+ 
+        // Layer 1: paved solid line (filter: surface === 'paved')
+        const pavedId = nextLayerId();
+        map.addLayer({
+          id: pavedId, type: 'line', source: sourceId,
+          filter: ['==', ['get', 'surface'], 'paved'],
+          layout: { 'line-cap': 'round', 'line-join': 'round' },
+          paint: { 'line-color': lineColor, 'line-width': weight, 'line-opacity': opacity }
+        });
+        map._routeLayerIds.push(pavedId);
+ 
+        // Layer 2: unpaved white base line. Drawn first so colored dashes sit on top.
+        // Prevents dashes from merging into a solid line on overlapping routes.
+        const whiteId = nextLayerId();
+        map.addLayer({
+          id: whiteId, type: 'line', source: sourceId,
+          filter: ['==', ['get', 'surface'], 'unpaved'],
+          layout: { 'line-cap': 'round', 'line-join': 'round' },
+          paint: { 'line-color': 'white', 'line-width': weight, 'line-opacity': 1 }
+        });
+        map._routeLayerIds.push(whiteId);
+ 
+        // Layer 3: unpaved dashed colored line on top of white base
+        const dashedId = nextLayerId();
+        map.addLayer({
+          id: dashedId, type: 'line', source: sourceId,
+          filter: ['==', ['get', 'surface'], 'unpaved'],
+          layout: { 'line-cap': 'round', 'line-join': 'round' },
+          paint: {
+            'line-color': lineColor,
+            'line-width': weight,
+            'line-opacity': opacity,
+            'line-dasharray': [2 / weight, 6 / weight]
           }
+        });
+        map._routeLayerIds.push(dashedId);
  
-          map.on('mouseenter', hitId, e => {
-            hoveredHitId = hitId;
-            map.getCanvas().style.cursor = 'pointer';
-            highlightRoute(segmentLines);
-            showPopup(e.lngLat);
-          });
-          map.on('mousemove', hitId, e => { activePopup?.setLngLat(e.lngLat); });
-          map.on('mouseleave', hitId, () => {
-            // Guard: only restore if the mouse hasn't already entered a different route
-            // (mouseenter on the new route fires before mouseleave on the old one)
-            if (hoveredHitId === hitId) {
-              hoveredHitId = null;
-              map.getCanvas().style.cursor = '';
-              restoreAllRoutes();
-              if (activePopup) { activePopup.remove(); activePopup = null; }
-            }
-          });
-          map.on('click', hitId, e => {
-            e.originalEvent?.stopPropagation();
-            if (hoveredHitId !== hitId) return; // Select only the route hovered (not one underneath) 
-            if (ride.url) window.open(ride.url, '_blank', 'noopener,noreferrer');
-          });
- 
-          // Marker hover/click mirrors the hit-layer behaviour
-          markerEl.getElement().addEventListener('mouseenter', () => {
-            if (!hoveredHitId) {
-              highlightRoute(segmentLines);
-              showPopup(markerEl.getLngLat());
-            }
-          });
-          markerEl.getElement().addEventListener('mouseleave', () => {
-            if (!hoveredHitId) {
-              restoreAllRoutes();
-              if (activePopup) { activePopup.remove(); activePopup = null; }
-            }
-          });
-          markerEl.getElement().addEventListener('click', e => {
-            e.stopPropagation();
-            if (ride.url) window.open(ride.url, '_blank', 'noopener,noreferrer');
-          });
+        return { segmentLines: [pavedId, dashedId], whitelines: [whiteId] };
+      }
+
+      // Hit area
+      // A wide transparent line layer placed over the route for easier
+      // clicking/tapping (finger-friendly on mobile, cursor-friendly on desktop).
+      function addHitLayer(hitWidth) {
+        const hitCoords = allLatLngs.map(([lat, lng]) => [lng, lat]);
+        const hitId = nextLayerId();
+        map.addSource(hitId, {
+          type: 'geojson',
+          data: { type: 'Feature', geometry: { type: 'LineString', coordinates: hitCoords } }
+        });
+        map.addLayer({ id: hitId, type: 'line', source: hitId,
+          paint: { 'line-color': 'transparent', 'line-width': hitWidth, 'line-opacity': 0 }
+        });
+        map._routeLayerIds.push(hitId);
+        return hitId;
+      }
+
+      if (isTouchDevice) {
+        // MOBILE
+        // Tap route → bottom sheet slides up with details
+
+        const { segmentLines, whitelines } = buildVisibleLines(color, 5, 0.85);
+        const hitId        = addHitLayer(25);
+        const markerEl     = createPinMarker([start[1], start[0]], color).addTo(map);
+        map._routeMarkers.push(markerEl);
+        allVisibleLayers.push({ segmentLines, whitelines, marker: markerEl, color, isMobile: true });
+
+        // Tap handler: highlight this route, dim all others, open the bottom sheet
+        const tapHandler = e => {
+          e.originalEvent?.stopPropagation();
+          restoreAllRoutes();
+          highlightRoute(segmentLines);
+          currentHL = segmentLines;
+          openSheet(ride);
+        };
+
+        map.on('click', hitId, e => { e.originalEvent.stopPropagation(); tapHandler(e); });
+        markerEl.getElement().addEventListener('click', e => { e.stopPropagation(); tapHandler({ originalEvent: e }); });
+
+      } else {
+        // DESKTOP
+        // Hover highlights the route, dims others, click opens Strava.
+
+        const { segmentLines, whitelines } = buildVisibleLines(color, 4, 0.8);
+        const hitId        = addHitLayer(20);
+        const markerEl     = createPinMarker([start[1], start[0]], color).addTo(map);
+        map._routeMarkers.push(markerEl);
+        allVisibleLayers.push({ segmentLines, whitelines, marker: markerEl, color, isMobile: false });
+
+        // HTML injected into the hover tooltip popup
+        const tooltipContent = buildTooltipHTML(ride, rideTime);
+
+        // Opens a popup anchored to the cursor position.
+        function showPopup(lngLat) {
+          if (activePopup) activePopup.remove();
+          activePopup = new maplibregl.Popup({
+            closeButton: false, closeOnClick: false,
+            className: 'ride-tooltip', maxWidth: 'none'
+          }).setLngLat(lngLat).setHTML(tooltipContent).addTo(map);
         }
-      });
+ 
+        map.on('mouseenter', hitId, e => {
+          hoveredHitId = hitId;
+          map.getCanvas().style.cursor = 'pointer';
+          highlightRoute(segmentLines);
+          showPopup(e.lngLat);
+        });
+        map.on('mousemove', hitId, e => { activePopup?.setLngLat(e.lngLat); });
+        map.on('mouseleave', hitId, () => {
+          // Guard: only restore if the mouse hasn't already entered a different route
+          // (mouseenter on the new route fires before mouseleave on the old one)
+          if (hoveredHitId === hitId) {
+            hoveredHitId = null;
+            map.getCanvas().style.cursor = '';
+            restoreAllRoutes();
+            if (activePopup) { activePopup.remove(); activePopup = null; }
+          }
+        });
+        map.on('click', hitId, e => {
+          e.originalEvent?.stopPropagation();
+          if (hoveredHitId !== hitId) return; // Select only the route hovered (not one underneath) 
+          if (ride.url) window.open(ride.url, '_blank', 'noopener,noreferrer');
+        });
+ 
+        // Marker hover/click mirrors the hit-layer behaviour
+        markerEl.getElement().addEventListener('mouseenter', () => {
+          if (!hoveredHitId) {
+            highlightRoute(segmentLines);
+            showPopup(markerEl.getLngLat());
+          }
+        });
+        markerEl.getElement().addEventListener('mouseleave', () => {
+          if (!hoveredHitId) {
+            restoreAllRoutes();
+            if (activePopup) { activePopup.remove(); activePopup = null; }
+          }
+        });
+        markerEl.getElement().addEventListener('click', e => {
+          e.stopPropagation();
+          if (ride.url) window.open(ride.url, '_blank', 'noopener,noreferrer');
+        });
+      }
+    });
 
     // Fit map to routes + races
     // Compute the bounding box of all route coordinates as well as races and zoom to fit with 5% padding.
@@ -1624,8 +1640,8 @@
     const container = document.getElementById("races-content");
     if (!container) return;
 
-    // Remove only previously-rendered race entries
-    container.querySelectorAll(".race-entry").forEach(el => el.remove());
+    // Remove only previously-rendered race entries and thei separators
+    container.querySelectorAll(".race-entry, hr:not(.static)").forEach(el => el.remove());
 
     // Get today's date for filtering. Avoid showing past races
     const today = new Date();
@@ -1658,6 +1674,8 @@
     // Build and append a card for each race
     upcoming.forEach(race => {
       container.appendChild(buildRaceCard(race));
+      const hr = document.createElement('hr');
+      container.appendChild(hr);
     });
 
     // Show BikeReg attribution after races load
@@ -1714,8 +1732,9 @@
     // Create race wrapper element
     const div = document.createElement("div");
 
-    // Used later for cleanup when re-rendering
+    // Used later for cleanup and highlight matching
     div.className = "race-entry";
+    div.dataset.raceName = race.name;
 
     // Build race card HTML
     div.innerHTML = `
@@ -1757,8 +1776,6 @@
         </p>
       </div>
 
-      <!-- Divider between races -->
-      <hr>
     `;
 
     // Return completed race card element
