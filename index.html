@@ -351,7 +351,7 @@
 <!-- Event banner for special events (floats over the map, centered) -->
  <!-- When no active banner exists in assets/banners/banner.json, this remains hidden -->
 <div id="event-banner" style="display:none; position:absolute; top:71px; left:0; right:0; z-index:500; text-align:center; pointer-events:none;">
-  <a id="event-banner-link" href="#" target="_blank" rel="noopener noreferrer" style="pointer-events:all;"></a>
+  <a id="event-banner-link" href="#" target="_blank" rel="noopener noreferrer" style="pointer-events:all;">
     <img id="event-banner-img" src="" alt="Event" style="display:inline-block; border-radius:6px;" />
   </a>
 </div>
@@ -688,6 +688,17 @@
 
       link.href           = banner.link || '#';
       wrapper.style.display = 'block';
+
+      // Track banner clicks in GoatCounter
+      link.addEventListener('click', function () {
+        if (window.goatcounter && window.goatcounter.count) {
+          window.goatcounter.count({
+            path:  'event-banner-click',
+            title: 'Banner Click - FAR May 30, 2026',
+            event: true,
+          });
+        }
+      });
 
       // Expose the banner height globally so fitBounds can add top padding,
       // keeping routes from being drawn underneath the banner.
