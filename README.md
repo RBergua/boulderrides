@@ -55,6 +55,7 @@ Ride data is automatically fetched from the Strava API by a backend process that
 ```json
 [
   {
+    "source": "Strava",
     "club_id": 575042,
     "club_name": "Rapha Boulder",
     "title": "Social Ride",
@@ -87,6 +88,7 @@ Ride data is automatically fetched from the Strava API by a backend process that
 
 | Field | Type | Description |
 |---|---|---|
+| `source` | string | Data source: `"Strava"`, `"Ride With GPS"`, or `"Link"` |
 | `club_id` | number | Strava club ID |
 | `club_name` | string | Name of the organizing club |
 | `title` | string | Ride name |
