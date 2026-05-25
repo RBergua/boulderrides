@@ -13,6 +13,19 @@
     "date": "2026-06-03"
   },
   {
+    "name": "Best Buddies Boulder Training Ride",
+    "url": "http://www.bestbuddieschallenge.org",
+    "reg_link": "http://www.BikeReg.com/76653",
+    "location": "Niwot",
+    "latitude": 40.10322,
+    "longitude": -105.171799,
+    "type": [
+      "Recreational",
+      "Bike Tour"
+    ],
+    "date": "2026-06-06"
+  },
+  {
     "name": "The Eddy Rando Steel Classic 2026",
     "url": "https://www.eddyrando.com",
     "reg_link": "http://www.BikeReg.com/75062",
@@ -191,5 +204,42 @@
       "Criterium"
     ],
     "date": "2026-07-15"
+  },
+  {
+    "name": "Peak to Peak Training Systems Training Race Series at South Table Mountain",
+    "url": "https://peaktopeak.trainingtiltapp.com/",
+    "reg_link": "http://www.BikeReg.com/75532",
+    "location": "Golden",
+    "latitude": 39.755543,
+    "longitude": -105.2210997,
+    "type": [
+      "Road Race",
+      "Criterium"
+    ],
+    "date": "2026-07-22"
+  },
+  {
+    "name": "2026 Colorado Park 2 Park Challenge",
+    "url": "http://www.copark2park.com",
+    "reg_link": "http://www.BikeReg.com/73286",
+    "location": "Denver",
+    "latitude": 39.743817,
+    "longitude": -104.9567045,
+    "type": [
+      "Gran Fondo"
+    ],
+    "date": "2026-07-25"
+  },
+  {
+    "name": "Mt. Blue Sky Hill Climb",
+    "url": "https://runsignup.com/Race/CO/IdahoSprings/BlueSkyHillClimb",
+    "reg_link": "https://runsignup.com/Race/Register/?raceId=188677",
+    "location": "Idaho Springs",
+    "latitude": 39.739563,
+    "longitude": -105.521937,
+    "type": [
+      "Hill Climb"
+    ],
+    "date": "2026-07-25"
   }
 ]
