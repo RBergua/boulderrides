@@ -31618,12 +31618,12 @@
     "title": "Friday Flag! | Flagstaff Alternate",
     "date": "2026-05-29",
     "url": "https://ridewithgps.com/events/456864",
-    "route_id": 49061313,
     "starting_location": [
       40.02439,
       -105.25417
     ],
     "women_only": false,
+    "route_id": 49061313,
     "distance": 16.5,
     "elevation_gain": 1752,
     "route": [
@@ -42552,12 +42552,12 @@
     "title": "Saturday Road Ride | Espresso: HyperFlag and NCAR",
     "date": "2026-05-30",
     "url": "https://ridewithgps.com/events/456935",
-    "route_id": 49233867,
     "starting_location": [
       40.02444,
       -105.25437
     ],
     "women_only": false,
+    "route_id": 49233867,
     "distance": 43.5,
     "elevation_gain": 5328,
     "route": [
@@ -53030,12 +53030,12 @@
     "title": "Saturday Road Ride | Half-Caf: Olde Stage> Super James> Lee Hill",
     "date": "2026-05-30",
     "url": "https://ridewithgps.com/events/456935",
-    "route_id": 50973806,
     "starting_location": [
       40.024349,
       -105.254311
     ],
     "women_only": false,
+    "route_id": 50973806,
     "distance": 35.9,
     "elevation_gain": 4419,
     "route": [
@@ -62318,12 +62318,12 @@
     "title": "Saturday Road Ride | Decaf: NCAR alt",
     "date": "2026-05-30",
     "url": "https://ridewithgps.com/events/456935",
-    "route_id": 51527244,
     "starting_location": [
       40.02434,
       -105.2541
     ],
     "women_only": false,
+    "route_id": 51527244,
     "distance": 13.5,
     "elevation_gain": 951,
     "route": [
@@ -66711,12 +66711,12 @@
     "title": "Sunday Gravel Ride | Summer Vibes Bike Rally & Run Community Ride! | Decaf: Chapman (FC group ride)",
     "date": "2026-05-31",
     "url": "https://ridewithgps.com/events/456995",
-    "route_id": 46644751,
     "starting_location": [
       40.0244,
       -105.25412
     ],
     "women_only": false,
+    "route_id": 46644751,
     "distance": 17.3,
     "elevation_gain": 1654,
     "route": [
@@ -72274,12 +72274,12 @@
     "title": "Sunday Gravel Ride | Summer Vibes Bike Rally & Run Community Ride! | Half-Caf & Espresso: Summer Vibes Gravel Enduro practice w/ Mike's Bikes",
     "date": "2026-05-31",
     "url": "https://ridewithgps.com/events/456995",
-    "route_id": 55215303,
     "starting_location": [
       40.02441,
       -105.25413
     ],
     "women_only": false,
+    "route_id": 55215303,
     "distance": 34.4,
     "elevation_gain": 4298,
     "route": [
