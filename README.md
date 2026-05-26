@@ -94,8 +94,8 @@ Ride data is automatically fetched from the Strava and Ride with GPS API by a ba
 | `title` | string | Ride name |
 | `date` | string | `"YYYY-MM-DD HH:MM"` in 24-hour format; displayed as 12-hour (AM/PM) in the frontend |
 | `url` | string | Link to the Strava or Ride with GPS ride event |
-| `women_only` | boolean | If `true`, shown in the description. Ride with GPS does not have this flag (defaults to `false`) |
 | `starting_location` | `[lat, lng]` | Start marker position (optional; if not available, it uses the first point in `route`) |
+| `women_only` | boolean | If `true`, shown in the description. Ride with GPS does not have this flag (defaults to `false`) |
 | `route_id` | number | Strava or Ride with GPS route ID |
 | `distance` | number | Route distance in miles (1 decimal); `null` if unavailable |
 | `elevation_gain` | number | Total elevation gain in feet (integer); `null` if unavailable |
