@@ -7,7 +7,7 @@
 # Boulder Group Rides
 
 An interactive map showing **cycling group rides in Boulder, Colorado**.
-It aggregates **Strava and Ride With GPS club events** and displays upcoming rides by day. It also lists nearby **races and events** sourced from **BikeReg**.
+It aggregates **Strava and Ride with GPS club events** and displays upcoming rides by day. It also lists nearby **races and events** sourced from **BikeReg**.
 
 ![Boulder Group Rides demo](demo.gif)
 
@@ -23,7 +23,7 @@ It aggregates **Strava and Ride With GPS club events** and displays upcoming rid
 - **Metric/Imperial units** — Bottom-left "Metric" button switches between miles/feet ↔ km/meters; updates tooltips and mobile sheets instantly (imperial by default)
 - **Paved vs unpaved surfaces** — Routes are drawn as solid lines on paved surfaces and dashed lines on unpaved surfaces
 - **Start pin markers** — A colored pin marks the starting location of each ride
-- **Desktop** — Hover over a route or its start pin to highlight it and dim the others to gray, showing the club name, ride title, start time, and whether the ride is women-only; click to open the Strava or Ride With GPS event in a new tab
+- **Desktop** — Hover over a route or its start pin to highlight it and dim the others to gray, showing the club name, ride title, start time, and whether the ride is women-only; click to open the Strava or Ride with GPS event in a new tab
 - **Mobile** — Tap a route or its start pin to see its details in a bottom sheet; tap "View on..." to open the event; swipe the panel down (or tap the map background) to dismiss it and restore all routes
 - **Auto-fit bounds** — The map zooms to fit all routes for the selected day
 - **Races & Events** — Dedicated page listing upcoming races and events
@@ -50,7 +50,7 @@ Then open [http://localhost:8000](http://localhost:8000) in your browser.
 
 ## Ride Data Format
 
-Ride data is automatically fetched from the Strava and Ride With GPS API by a backend process that runs twice a day (12 PM & 1 AM) and keeps `club_rides.json` up to date. Each entry in the array represents one ride:
+Ride data is automatically fetched from the Strava and Ride with GPS API by a backend process that runs twice a day (12 PM & 1 AM) and keeps `club_rides.json` up to date. Each entry in the array represents one ride:
 
 ```json
 [
@@ -88,15 +88,15 @@ Ride data is automatically fetched from the Strava and Ride With GPS API by a ba
 
 | Field | Type | Description |
 |---|---|---|
-| `source` | string | Data source: `"Strava"`, `"Ride With GPS"`, or `"Site"` |
-| `club_id` | number | Strava or Ride With GPS club ID |
+| `source` | string | Data source: `"Strava"`, `"Ride with GPS"`, or `"Site"` |
+| `club_id` | number | Strava or Ride with GPS club ID |
 | `club_name` | string | Name of the organizing club |
 | `title` | string | Ride name |
 | `date` | string | `"YYYY-MM-DD HH:MM"` in 24-hour format; displayed as 12-hour (AM/PM) in the frontend |
-| `url` | string | Link to the Strava or Ride With GPS ride event |
-| `women_only` | boolean | If `true`, shown in the description. Ride With GPS does not have this flag (defaults to `false`) |
+| `url` | string | Link to the Strava or Ride with GPS ride event |
+| `women_only` | boolean | If `true`, shown in the description. Ride with GPS does not have this flag (defaults to `false`) |
 | `starting_location` | `[lat, lng]` | Start marker position (optional; if not available, it uses the first point in `route`) |
-| `route_id` | number | Strava or Ride With GPS route ID |
+| `route_id` | number | Strava or Ride with GPS route ID |
 | `distance` | number | Route distance in miles (1 decimal); `null` if unavailable |
 | `elevation_gain` | number | Total elevation gain in feet (integer); `null` if unavailable |
 | `route` | `[[lat, lng, surface], ...]` | Array of latitude and longitude coordinates defining the route; each point includes a surface tag (`"paved"` or `"unpaved"`), or `null` if the OpenStreetMap surface classification failed |
@@ -145,7 +145,7 @@ Race and event data is stored in `races.json`. Data is refreshed weekly from the
 
 ```
 ├── index.html        # Main app (map + calendar)
-└── club_rides.json   # Ride data, auto-updated by the backend process (Strava and Ride With GPS API). The file is only committed when its contents change
+└── club_rides.json   # Ride data, auto-updated by the backend process (Strava and Ride with GPS API). The file is only committed when its contents change
 └── races.json        # Race and event data, auto-updated by the backend process (BikeReg API). Major events not on BikeReg are hardcoded
 ```
 
@@ -165,7 +165,7 @@ Race and event data is stored in `races.json`. Data is refreshed weekly from the
 - [Service Worker](https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API) — Extends MapTiler tile cache from the deault 8 hours to 120 days, saving API requests and making the map load faster for returning visitors (tiles served from disk instead of the network)
 - [OpenStreetMap](https://www.openstreetmap.org/) — Road surface data source used for paved/unpaved classification, queried via the [Overpass API](https://overpass-api.de/) by the backend
 - [Strava API](https://developers.strava.com/) — Source of group ride data, fetched by the backend
-- [Ride With GPS API](https://ridewithgps.com/api) — Source of group ride data, fetched by the backend
+- [Ride with GPS API](https://ridewithgps.com/api) — Source of group ride data, fetched by the backend
 - [BikeReg API](https://www.bikereg.com/) — Source of race and event data, fetched by the backend
 - [GoatCounter](https://www.goatcounter.com/) — Privacy-friendly analytics
 
