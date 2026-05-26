@@ -761,7 +761,7 @@
   // Loads initial rides data in parallel and plots them once map is ready
   //console.time('club_rides.json'); // Testing: check the time to load JSON data.
   const ridesReady = (async () => {
-    const res = await fetch('club_rides.json');
+    const res = await fetch('club_rides.json', { cache: 'no-store' }); // cache: 'no-store' ensures we bypass browser/PWA caching for the JSON file with the routes, so we always get the latest version.
     const rides = await res.json();
     //console.timeEnd('club_rides.json'); // Testing: check the time to load JSON data.
 
@@ -781,7 +781,7 @@
   let allRaces = [];
 
   const racesReady = (async () => {
-    const res = await fetch('races.json');
+    const res = await fetch('races.json', { cache: 'no-store' }); // cache: 'no-store' ensures we bypass browser/PWA caching for the JSON file with the routes, so we always get the latest version.
     allRaces = await res.json();
 
     // Group races by date (YYYY-MM-DD). A multi-day race is indexed under each of its dates.
