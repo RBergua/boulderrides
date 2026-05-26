@@ -620,7 +620,7 @@
 
     const el = document.createElement('div');
     el.innerHTML = `<svg width="24" height="32" viewBox="-1 -1 26 34" xmlns="http://www.w3.org/2000/svg">${pinContent}</svg>`;
-    el.style.cssText = 'cursor:pointer; width:24px; height:32x;';
+    el.style.cssText = 'cursor:pointer; width:24px; height:32px;';
     return new maplibregl.Marker({ element: el, anchor: 'bottom' }).setLngLat(lnglat);
   }
 
@@ -758,7 +758,7 @@
   // A multi-day race appears under each of its dates.
   let racesByDate = {};
 
-  // Loads initial rides data in parallel and plots them once map is ready
+  // Loads initial rides data concurrently and plots them once map is ready
   //console.time('club_rides.json'); // Testing: check the time to load JSON data.
   const ridesReady = (async () => {
     const res = await fetch('club_rides.json', { cache: 'no-store' }); // cache: 'no-store' ensures we bypass browser/PWA caching for the JSON file with the routes, so we always get the latest version.
@@ -781,7 +781,7 @@
   let allRaces = [];
 
   const racesReady = (async () => {
-    const res = await fetch('races.json', { cache: 'no-store' }); // cache: 'no-store' ensures we bypass browser/PWA caching for the JSON file with the routes, so we always get the latest version.
+    const res = await fetch('races.json', { cache: 'no-store' }); // cache: 'no-store' ensures we bypass browser/PWA caching for the JSON file with the races, so we always get the latest version.
     allRaces = await res.json();
 
     // Group races by date (YYYY-MM-DD). A multi-day race is indexed under each of its dates.
@@ -813,7 +813,7 @@
   // Re-fetch rides from JSON file when the user brings the tab or app back to the foreground.
   let lastDataString = null; // Snapshot of the last fetched data to detect changes
   let lastFetchTime = 0; // Last time that we performed a fetch
-  let calendarAnchorDate = formatLocalDate(new Date()); // The "today" date used when the calendar was last built
+  let calendarAnchorDate = formatLocalDate(new Date()); // The date on which the calendar was last generated
   
   // Minimum time between refreshes (in ms)
   // Prevents excessive network calls when users rapidly switch tabs/apps
@@ -839,10 +839,10 @@
       lastFetchTime = now;
 
       // Fetch the latest rides and races JSON data in parallel
-      // cache: 'no-store' ensures we bypass browser/PWA caching for the JSON file with the routes
+      // cache: 'no-store' ensures we bypass browser/PWA caching for the JSON file with the routes and races
       Promise.all([
         fetch('club_rides.json', { cache: 'no-store' }).then(r => r.json()),
-        fetch('races.json').then(r => r.json())
+        fetch('races.json', { cache: 'no-store' }).then(r => r.json())
       ])
         .then(([rides, races]) => {
 
@@ -863,8 +863,9 @@
           races.forEach(race => {
             const dates = Array.isArray(race.date) ? race.date : [race.date];
             dates.forEach(date => {
-              if (!newRacesByDate[date]) newRacesByDate[date] = [];
-              newRacesByDate[date].push(race);
+              const iso = formatLocalDate(parseLocalDate(date)); // normalize to YYYY-MM-DD, same as initial load
+              if (!newRacesByDate[iso]) newRacesByDate[iso] = [];
+              newRacesByDate[iso].push(race);
             });
           });
 
@@ -1664,7 +1665,7 @@
   // -------------------------------
   // Load races & render Races page
   // -------------------------------
-  // Renders the Races page list from the already-loaded allRaces array (no extra fetch).
+  // Renders the Races page list from the already-loaded allRaces array, kept fresh by the visibility refresh.
   window.loadRaces = function loadRaces() { // window.loadRaces in the global scope so it can be called from the button click
     const container = document.getElementById("races-content");
     if (!container) return;
@@ -1814,7 +1815,7 @@
   // -------------------------------
   // Generate 7-day calendar
   // -------------------------------
-  // Local date string in YYYY-MM-DD format using local timezone for comparison with ride dates
+  // Local date string in YYYY-MM-DD format using local timezone for comparison with ride and races dates
   function formatLocalDate(date) {
   return date.getFullYear() + "-" +
          String(date.getMonth() + 1).padStart(2,'0') + "-" +
@@ -1883,7 +1884,7 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
       .then(() => console.log('Service Worker registered'))
-      .catch(err => console.error('Sevive Worker registration failed:', err));
+      .catch(err => console.error('Service Worker registration failed:', err));
   });
 }
 </script>
