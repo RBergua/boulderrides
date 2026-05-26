@@ -250,8 +250,8 @@
 	  .sheet-badge.nonboulder { background: #f0fff4; color: #28a745; border-color: #b2dfdb; }
     a:has(.sheet-badge) { text-decoration: none; } /* remove underline from badges */
 
-    /* "View on Strava" button */
-    #sheet-strava-btn {
+    /* "View on {source}" button */
+    #sheet-source-btn {
       display: block; width: 100%; background: #fc4c02; color: white; border: none;
       border-radius: 12px; padding: 14px; font-size: 1em; font-weight: 700;
       font-family: Arial, sans-serif; cursor: pointer; text-align: center;
@@ -259,8 +259,8 @@
       transition: background 0.2s, transform 0.1s;
       -webkit-tap-highlight-color: transparent;
     }
-    #sheet-strava-btn:active { background: #e04400; transform: scale(0.98); }
-    #sheet-strava-btn.no-url { background: #ccc; cursor: default; }
+    #sheet-source-btn:active { background: #e04400; transform: scale(0.98); }
+    #sheet-source-btn.no-url { background: #ccc; cursor: default; }
 
     /* On touch devices: hide info button, races button, metric button, and map attribution behind sheet when open */
     @media (pointer: coarse) {
@@ -381,7 +381,7 @@
     </div>
     <div id="sheet-title"></div>
     <div id="sheet-meta"></div>
-    <a id="sheet-strava-btn" target="_blank" rel="noopener noreferrer">View on Strava</a>
+    <a id="sheet-source-btn" target="_blank" rel="noopener noreferrer">View on...</a>
   </div>
 </div>
 
@@ -911,7 +911,7 @@
   const sheetClub  = document.getElementById("sheet-club");
   const sheetTitle = document.getElementById("sheet-title");
   const sheetMeta  = document.getElementById("sheet-meta");
-  const sheetBtn   = document.getElementById("sheet-strava-btn");
+  const sheetBtn   = document.getElementById("sheet-source-btn");
   const infoBtnEl  = document.getElementById("info-btn");
   const racesBtnEl = document.getElementById("races-btn");
   const metricBtn  = document.getElementById('metric-btn');
@@ -966,7 +966,8 @@
  
     if (ride.women_only) addBadge("Women only", "women");
  
-    // Wire up the Strava button
+    // Wire up the source button
+    sheetBtn.textContent = `View on ${ride.source}`;
     if (ride.url) { sheetBtn.href = ride.url; sheetBtn.classList.remove("no-url"); }
     else          { sheetBtn.removeAttribute("href"); sheetBtn.classList.add("no-url"); }
  
@@ -1238,7 +1239,8 @@
     map._routeLayerIds  = [];
 
     // Data for selected date
-    const routes = ridesByDate[date] || [];
+    //const routes = ridesByDate[date] || [];
+    const routes = (ridesByDate[date] || []).filter(r => r.source === "Strava"); // Filter for debugging purposes: only show Strava routes on the map.
     const races  = racesByDate[date] || [];
 
     // Add a checkered pin for each race on this date (reuses _routeMarkers for automatic cleanup on day change)
