@@ -873,6 +873,16 @@
           racesByDate = newRacesByDate;
           allRaces    = races;
 
+          // Refresh gray "ride-day" calendar styling without rebuilding the calendar. If rides are added or removed for a date, the corresponding column gets styled or unstyled accordingly.
+          document.querySelectorAll('.day-column').forEach(col => {
+            const date = col.dataset.date;
+
+            const hasRides = (ridesByDate[date]?.length || 0) > 0;
+            const hasRaces = (racesByDate[date]?.length || 0) > 0;
+
+            col.classList.toggle('ride-day', hasRides || hasRaces);
+          });
+
           if (dayChanged) {
             // The calendar is old (built on a previous day). We rebuild it entirely
             // so today's column is correct.
