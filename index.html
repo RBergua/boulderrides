@@ -1255,7 +1255,9 @@
 
     // Data for selected date
     //const routes = (ridesByDate[date] || []).filter(r => r.source === "Strava"); // Filter for debugging purposes: only show Strava routes on the map.
-    const routes = ridesByDate[date] || [];
+    //const routes = (ridesByDate[date] || []).filter(r => r.source === "Ride with GPS"); // Filter for debugging purposes: only show Ride with GPS routes on the map.
+    const routes = (ridesByDate[date] || []).filter(r => r.source === "Ride with GPS" || r.source === "Strava"); // Filter for debugging purposes: show both Strava and Ride with GPS routes on the map.
+    //const routes = ridesByDate[date] || [];
     const races  = racesByDate[date] || [];
 
     // Add a checkered pin for each race on this date (reuses _routeMarkers for automatic cleanup on day change)
