@@ -89,7 +89,7 @@ Ride data is automatically fetched from the Strava and Ride with GPS API by a ba
 | Field | Type | Description |
 |---|---|---|
 | `source` | string | Data source: `"Strava"`, `"Ride with GPS"`, or `"Site"` |
-| `club_id` | number | Strava or Ride with GPS club ID |
+| `club_id` | number | Strava or Ride with GPS club ID; `null` if unavailable |
 | `club_name` | string | Name of the organizing club |
 | `title` | string | Ride name |
 | `date` | string | `"YYYY-MM-DD HH:MM"` in 24-hour format; displayed as 12-hour (AM/PM) in the frontend |
