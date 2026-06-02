@@ -10,9 +10,9 @@
 > On June 1, 2026, Strava announced significant changes to its Developer Program and API Terms:
 >
 > * An active Strava subscription will be required by **June 30, 2026**, to maintain API access.
-> * The Club Activities endpoints will be deprecated on **September 1, 2026**. Strava cited low developer adoption as the reason for discontinuing support.
+> * The Club Activities endpoints on the API will be deprecated on **September 1, 2026**. Strava cited low developer adoption as the reason for discontinuing support.
 >
-> Meanwhile, Ride with GPS has introduced support for free one-time ride events in addition to its Club Account offering for recurring rides, expanding the options available for group ride organization. 
+> Meanwhile, Ride with GPS has introduced support for free non-recurring ride events in addition to its paid Club Account offering that includes recurring rides, expanding the options available for group ride organization. 
 > 
 > We are monitoring these changes and evaluating their impact on the project.
 
