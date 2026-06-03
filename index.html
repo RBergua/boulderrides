@@ -621,6 +621,7 @@
     const el = document.createElement('div');
     el.innerHTML = `<svg width="24" height="32" viewBox="-1 -1 26 34" xmlns="http://www.w3.org/2000/svg">${pinContent}</svg>`;
     el.style.cssText = 'cursor:pointer; width:24px; height:32px;';
+    if (checkered) el.style.cssText += ' position:relative; z-index:400;'; // Only race pins need the higher stacking order to be in front of routes or regular pins
     return new maplibregl.Marker({ element: el, anchor: 'bottom' }).setLngLat(lnglat);
   }
 
