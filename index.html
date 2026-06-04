@@ -316,7 +316,7 @@
       opacity: 0.9;
       display: flex;
       align-items: center;   /* vertical centering */
-      line-height: normal;   
+      line-height: normal;
     }
 
     /* Slightly larger attribution text on desktop */
@@ -597,7 +597,7 @@
   // Returns a maplibregl.Marker already positioned.
   function createPinMarker(lnglat, color, checkered = false) {
     const PIN_PATH = "M12 0 C5.4 0 0 5.4 0 12 C0 21 12 32 12 32 C12 32 24 21 24 12 C24 5.4 18.6 0 12 0 Z";
-    
+
     let pinContent;
     if (checkered) { // Checkered pin for races
       const uid = Math.random().toString(36).slice(2); // unique id so multiple pins don't share the same clipPath
@@ -762,7 +762,7 @@
   // Loads initial rides data concurrently and plots them once map is ready
   //console.time('club_rides.json'); // Testing: check the time to load JSON data.
   const ridesReady = (async () => {
-    const res = await fetch('club_rides.json', { cache: 'no-store' }); // cache: 'no-store' ensures we bypass browser/PWA caching for the JSON file with the routes, so we always get the latest version.
+    const res = await fetch('club_rides.json?v=' + Date.now(), { cache: 'no-store' }); // cache: 'no-store' + timestamp ensures we bypass all caching (browser, PWA, server)
     const rides = await res.json();
     //console.timeEnd('club_rides.json'); // Testing: check the time to load JSON data.
 
@@ -782,7 +782,7 @@
   let allRaces = [];
 
   const racesReady = (async () => {
-    const res = await fetch('races.json', { cache: 'no-store' }); // cache: 'no-store' ensures we bypass browser/PWA caching for the JSON file with the races, so we always get the latest version.
+    const res = await fetch('races.json?v=' + Date.now(), { cache: 'no-store' }); // cache: 'no-store' + timestamp ensures we bypass all caching (browser, PWA, server)
     allRaces = await res.json();
 
     // Group races by date (YYYY-MM-DD). A multi-day race is indexed under each of its dates.
@@ -798,7 +798,7 @@
   })();
 
   // MapLibre requires addSource/addLayer after the style is ready.
-  // Wait for BOTH the map style AND ride data before rendering — whichever
+  // Wait for BOTH the map style AND ride data before rendering. Whichever
   // finishes last triggers generateCalendar().
   //console.time('map style'); // Testing: check the time to load the map style.
   map.on('load', () => {
@@ -815,11 +815,11 @@
   let lastDataString = null; // Snapshot of the last fetched data to detect changes
   let lastFetchTime = 0; // Last time that we performed a fetch
   let calendarAnchorDate = formatLocalDate(new Date()); // The date on which the calendar was last generated
-  
+
   // Minimum time between refreshes (in ms)
   // Prevents excessive network calls when users rapidly switch tabs/apps
   const MIN_REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
-  
+
   // Listen for when the tab/app becomes visible again
   // This is especially important for PWA/mobile users who background the app
   document.addEventListener('visibilitychange', () => {
@@ -840,10 +840,10 @@
       lastFetchTime = now;
 
       // Fetch the latest rides and races JSON data in parallel
-      // cache: 'no-store' ensures we bypass browser/PWA caching for the JSON file with the routes and races
+      // cache: 'no-store' + timestamp ensures we bypass all caching (browser, PWA, server)
       Promise.all([
-        fetch('club_rides.json', { cache: 'no-store' }).then(r => r.json()),
-        fetch('races.json', { cache: 'no-store' }).then(r => r.json())
+        fetch('club_rides.json?v=' + Date.now(), { cache: 'no-store' }).then(r => r.json()),
+        fetch('races.json?v=' + Date.now(), { cache: 'no-store' }).then(r => r.json())
       ])
         .then(([rides, races]) => {
 
