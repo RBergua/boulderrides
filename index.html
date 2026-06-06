@@ -56,7 +56,7 @@
   <link rel="apple-touch-startup-image" media="screen and (device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)" href="/assets/splash_screens/iPhone_8_Plus__iPhone_7_Plus__iPhone_6s_Plus__iPhone_6_Plus_landscape.png">
   <link rel="apple-touch-startup-image" media="screen and (device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" href="/assets/splash_screens/iPhone_8__iPhone_7__iPhone_6s__iPhone_6__4.7__iPhone_SE_landscape.png">
   <link rel="apple-touch-startup-image" media="screen and (device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" href="/assets/splash_screens/4__iPhone_SE__iPod_touch_5th_generation_and_later_landscape.png">
- 
+
   <!-- iPads — landscape -->
   <link rel="apple-touch-startup-image" media="screen and (device-width: 1032px) and (device-height: 1376px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" href="/assets/splash_screens/13__iPad_Pro_M4_landscape.png">
   <link rel="apple-touch-startup-image" media="screen and (device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" href="/assets/splash_screens/12.9__iPad_Pro_landscape.png">
@@ -67,7 +67,7 @@
   <link rel="apple-touch-startup-image" media="screen and (device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" href="/assets/splash_screens/10.2__iPad_landscape.png">
   <link rel="apple-touch-startup-image" media="screen and (device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" href="/assets/splash_screens/9.7__iPad_Pro__7.9__iPad_mini__9.7__iPad_Air__9.7__iPad_landscape.png">
   <link rel="apple-touch-startup-image" media="screen and (device-width: 744px) and (device-height: 1133px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" href="/assets/splash_screens/8.3__iPad_Mini_landscape.png">
- 
+
   <!-- iPhones — portrait -->
   <link rel="apple-touch-startup-image" media="screen and (device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/assets/splash_screens/iPhone_17_Pro_Max__iPhone_16_Pro_Max_portrait.png">
   <link rel="apple-touch-startup-image" media="screen and (device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/assets/splash_screens/iPhone_17_Pro__iPhone_17__iPhone_16_Pro_portrait.png">
@@ -82,7 +82,7 @@
   <link rel="apple-touch-startup-image" media="screen and (device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/assets/splash_screens/iPhone_8_Plus__iPhone_7_Plus__iPhone_6s_Plus__iPhone_6_Plus_portrait.png">
   <link rel="apple-touch-startup-image" media="screen and (device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="/assets/splash_screens/iPhone_8__iPhone_7__iPhone_6s__iPhone_6__4.7__iPhone_SE_portrait.png">
   <link rel="apple-touch-startup-image" media="screen and (device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="/assets/splash_screens/4__iPhone_SE__iPod_touch_5th_generation_and_later_portrait.png">
- 
+
   <!-- iPads — portrait -->
   <link rel="apple-touch-startup-image" media="screen and (device-width: 1032px) and (device-height: 1376px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="/assets/splash_screens/13__iPad_Pro_M4_portrait.png">
   <link rel="apple-touch-startup-image" media="screen and (device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="/assets/splash_screens/12.9__iPad_Pro_portrait.png">
@@ -115,19 +115,19 @@
     }
 
     /* Calendar */
-    #calendar { 
-      display: flex; 
+    #calendar {
+      display: flex;
       gap: 10px;
-      padding: 10px; 
+      padding: 10px;
       overflow-x: auto;
       height: 64px;
       box-sizing: border-box;
     }
-    .day-column { 
-      display: flex; 
-      flex-direction: column; 
+    .day-column {
+      display: flex;
+      flex-direction: column;
       align-items: center;
-      justify-content: center; 
+      justify-content: center;
       min-width: 60px;
       cursor: pointer;
       padding: 5px;
@@ -226,8 +226,8 @@
 
     /* Mobile bottom sheet */
     #ride-sheet {
-      position: fixed; 
-      bottom: 0; left: 0; right: 0; 
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
       z-index: 900;
       background: white; border-radius: 18px 18px 0 0;
       box-shadow: 0 -4px 24px rgba(0,0,0,0.18);
@@ -269,7 +269,7 @@
       #metric-btn { transition: background 0.2s, bottom 0.3s ease; }
       #info-btn.sheet-open { opacity: 0; pointer-events: none; }
       #races-btn.sheet-open { opacity: 0; pointer-events: none; }
-      #metric-btn.sheet-open { opacity: 0; pointer-events: none; }      
+      #metric-btn.sheet-open { opacity: 0; pointer-events: none; }
       .maplibregl-ctrl-attrib { transition: opacity 0.3s ease; } /* compact mode */
       .maplibregl-ctrl-attrib.hidden { opacity: 0; pointer-events: none; }
     }
@@ -358,7 +358,7 @@
 
 <!-- Full-screen map -->
 <div id="map"></div>
- 
+
 <!-- "More" info button (bottom-left, above Races) -->
 <!-- We call openInfoPage() function instead of "document.getElementById('info-page').classList.add('open');" here to refresh the Buy Me a Coffee button -->
 <button id="info-btn" class="overlay-btn"
@@ -405,7 +405,7 @@
       <br>
       Every bit helps keep it alive!
     </p>
- 
+
     <hr>
 
     <h2>Why this exists</h2>
@@ -536,7 +536,7 @@
 
     <hr class="static">
   </div>
-  
+
   <!-- BikeReg attribution: outside races-content so it renders after the dynamically appended race entries -->
   <p id="bikereg-attribution" style="display: none; text-align: center; max-width: 640px; margin: 0 auto 20px;">
     <a href="https://www.bikereg.com" target="_blank" rel="noopener noreferrer">
@@ -583,8 +583,8 @@
 
    // Formats an elevation gain (stored in feet) as either ft or m (based on Metric flag).
   function formatElevation(feet) {
-    return metricUnits 
-      ? Math.round(feet * 0.3048).toLocaleString() + ' m' // From feet to meters 
+    return metricUnits
+      ? Math.round(feet * 0.3048).toLocaleString() + ' m' // From feet to meters
       : feet.toLocaleString() + ' ft'; // The JSON file has already the units in feet
   }
 
@@ -720,7 +720,7 @@
 
   // Start with the fallback style so the map is immediately visible and interactive.
   // Then probe MapTiler with a HEAD request (no data downloaded) and silently swap
-  // to the richer vector style if the key is valid and quota is available.  
+  // to the richer vector style if the key is valid and quota is available.
   const map = new maplibregl.Map({
     container: 'map',
     style:     fallbackStyleUrl,
@@ -832,7 +832,7 @@
       // regardless of the MIN_REFRESH_INTERVAL. The day has rolled over!
       const dayChanged = todayDate !== calendarAnchorDate;
 
-      // If we fetched club_rides.json recently and the day has not changed, 
+      // If we fetched club_rides.json recently and the day has not changed,
       // skip this refresh. This avoids unnecessary repeated requests from quick tab switching
       if (!dayChanged && now - lastFetchTime < MIN_REFRESH_INTERVAL) return;
 
@@ -899,14 +899,14 @@
               //console.log('No JSON data change, skipping routes update'); // Testing
               return;
             }
- 
+
             // Re-render the currently selected day
             // This keeps the user's context intact instead of resetting the UI
             const selected = document.querySelector('.day-column.selected');
             if (selected?.dataset.date) loadRoutes(selected.dataset.date);
             //console.log('Ride data refreshed'); // Testing
           }
- 
+
           // Save the new snapshot for future comparisons
           lastDataString = newDataString;
         })
@@ -943,8 +943,8 @@
     metricBtn.classList.toggle('active', metricUnits);
     const selected = document.querySelector('.day-column.selected');
     if (selected?.dataset.date) loadRoutes(selected.dataset.date);
-  });  
-  
+  });
+
   // Swipe down to close
   let touchStartY = 0;
   sheet.addEventListener("touchstart", (e) => {
@@ -960,7 +960,7 @@
     sheetBar.style.background  = ride.color || "#007bff";
     sheetClub.textContent      = ride.club_name;
     sheetTitle.textContent     = ride.title;
- 
+
     // Build badge chips: time | distance + elevation | women-only
     sheetMeta.innerHTML = "";
     const addBadge = (text, extra = '') => {
@@ -969,9 +969,9 @@
       b.textContent = text;
       sheetMeta.appendChild(b);
     };
- 
+
     addBadge(formatTime12h(ride.date.split(" ")[1]));
- 
+
     if (ride.distance != null || ride.elevation_gain != null) {
       const parts = [
         ride.distance      != null ? `Distance: ${formatDistance(ride.distance)}`           : '',
@@ -979,14 +979,14 @@
       ].filter(Boolean);
       addBadge(parts.join(' | '));
     }
- 
+
     if (ride.women_only) addBadge("Women only", "women");
- 
+
     // Wire up the source button
     sheetBtn.textContent = `View on ${ride.source}`;
     if (ride.url) { sheetBtn.href = ride.url; sheetBtn.classList.remove("no-url"); }
     else          { sheetBtn.removeAttribute("href"); sheetBtn.classList.add("no-url"); }
- 
+
     sheet.classList.add("open");
     requestAnimationFrame(() => {
       infoBtnEl.classList.add("sheet-open");
@@ -1022,8 +1022,8 @@
   // Each point is [lat, lng, surface] where surface is 'paved' or 'unpaved'.
   // Returns an array of segments: { latlngs: [[lat, lng], ...], surface: 'paved'|'unpaved' }
   //
-  // Step 0 — input normalization: ensure every point has a valid surface type. 
-  // Only an explicit 'unpaved' string gets the dashed treatment. 
+  // Step 0 — input normalization: ensure every point has a valid surface type.
+  // Only an explicit 'unpaved' string gets the dashed treatment.
   // If there is no surface data available (e.g., null), it will be treated as a continuous line.
   //
   // Step 1 — smooth: isolated single unpaved points flanked by paved on both
@@ -1033,7 +1033,7 @@
   //
   // Step 2 — single pass (core logic):
   // We walk through the route point-by-point using spatial proximity detection.
-  // The idea is that on the first unpaved, we discretize the route. Later on, we check if new unpaved 
+  // The idea is that on the first unpaved, we discretize the route. Later on, we check if new unpaved
   // points are close to the route that was already drawn.
   // For each point:
   //  If it's paved:    → always draw
@@ -1343,7 +1343,6 @@
     // Applies an array of paint-property changes in a single GPU repaint.
     // Uses map.style.batch() for zero visible delay when highlighting many layers at once.
     // Falls back to sequential setPaintProperty on older builds where this is not available.
-    // * @param {Array<{id, prop, value}>} changes
     function applyStyles(changes) {
       const apply = () => changes.forEach(({ id, prop, value }) => {
         // Kill the default MapLibre paint transition (~300ms) before each change so
@@ -1354,9 +1353,8 @@
       typeof map.style.batch === 'function' ? map.style.batch(apply) : apply();
     }
 
-    // highlightRoute / restoreAllRoutes 
+    // highlightRoute / restoreAllRoutes
     // Thickens and fully saturates one route while dimming all others to gray.
-    // * @param {Array<string>} activeSegmentLines. Layer IDs belonging to the active ride
     function highlightRoute(activeSegmentLines) {
       const changes = [];
       allVisibleLayers.forEach(l => {
@@ -1429,7 +1427,7 @@
       function buildVisibleLines(lineColor, weight, opacity) {
         const toML = latlngs => latlngs.map(([lat, lng]) => [lng, lat]);
         const sourceId = nextLayerId();
- 
+
         if (!SHOW_SURFACE) {
           // Single source + single layer for the whole route
           map.addSource(sourceId, {
@@ -1445,7 +1443,7 @@
           map._routeLayerIds.push(sourceId, layerId);
           return { segmentLines: [layerId], whitelines: [] };
         }
- 
+
         // Build one FeatureCollection with all segments tagged by surface type.
         // This is a single addSource call regardless of how many segments there are in a route.
         const segments = buildSegments(ride.route);
@@ -1454,12 +1452,12 @@
           properties: { surface: seg.surface },
           geometry: { type: 'LineString', coordinates: toML(seg.latlngs) }
         }));
- 
+
         map.addSource(sourceId, {
           type: 'geojson',
           data: { type: 'FeatureCollection', features }
         });
- 
+
         // Layer 1: paved solid line (filter: surface === 'paved')
         const pavedId = nextLayerId();
         map.addLayer({
@@ -1469,7 +1467,7 @@
           paint: { 'line-color': lineColor, 'line-width': weight, 'line-opacity': opacity }
         });
         map._routeLayerIds.push(pavedId);
- 
+
         // Layer 2: unpaved white base line. Drawn first so colored dashes sit on top.
         // Prevents dashes from merging into a solid line on overlapping routes.
         const whiteId = nextLayerId();
@@ -1480,7 +1478,7 @@
           paint: { 'line-color': 'white', 'line-width': weight, 'line-opacity': 1 }
         });
         map._routeLayerIds.push(whiteId);
- 
+
         // Layer 3: unpaved dashed colored line on top of white base
         const dashedId = nextLayerId();
         map.addLayer({
@@ -1495,7 +1493,7 @@
           }
         });
         map._routeLayerIds.push(dashedId);
- 
+
         return { segmentLines: [pavedId, dashedId], whitelines: [whiteId] };
       }
 
@@ -1559,7 +1557,7 @@
             className: 'ride-tooltip', maxWidth: 'none'
           }).setLngLat(lngLat).setHTML(tooltipContent).addTo(map);
         }
- 
+
         map.on('mouseenter', hitId, e => {
           hoveredHitId = hitId;
           map.getCanvas().style.cursor = 'pointer';
@@ -1582,7 +1580,7 @@
           if (hoveredHitId !== hitId) return; // Select only the route hovered (not one underneath) 
           if (ride.url) window.open(ride.url, '_blank', 'noopener,noreferrer');
         });
- 
+
         // Marker hover/click mirrors the hit-layer behaviour
         markerEl.getElement().addEventListener('mouseenter', () => {
           if (!hoveredHitId) {
@@ -1649,12 +1647,12 @@
   function buildTooltipHTML(ride, rideTime) {
     const badge = (text, extra = '') =>
       `<span style="background:${extra ? '#f3f0ff' : '#f0f6ff'}; color:${extra ? '#6f42c1' : '#007bff'}; border:1px solid ${extra ? '#d0c4f7' : '#cce0ff'}; border-radius:20px; padding:4px 12px; font-size:1.2em; font-weight:600;">${text}</span>`;
- 
+
     const distElev = [
       ride.distance      != null ? `Distance: ${formatDistance(ride.distance)}`           : '',
       ride.elevation_gain != null ? `Elev Gain: ${formatElevation(ride.elevation_gain)}` : '',
     ].filter(Boolean).join(' | ');
- 
+
     return `
       <div style="font-size:1.6em; font-weight:700; text-transform:uppercase; color:#111; line-height:1.3; margin-bottom:6px;">${ride.club_name}</div>
       <div style="font-size:1.4em; color:#888; margin-bottom:12px;">${ride.title}</div>
@@ -1824,7 +1822,7 @@
          String(date.getMonth() + 1).padStart(2,'0') + "-" +
          String(date.getDate()).padStart(2,'0');
   }
-  
+
   // Builds the 7-day calendar strip, then auto-selects the first day with rides or races.
   function generateCalendar() {
     const calendarDiv = document.getElementById("calendar");
@@ -1839,36 +1837,36 @@
       const isoDate = formatLocalDate(date);
       const rides   = ridesByDate[isoDate] || [];
       const races   = racesByDate[isoDate] || [];
- 
+
       const col     = document.createElement("div");
       col.className = "day-column" + ((rides.length || races.length) ? " ride-day" : "");
       col.dataset.date = isoDate;
- 
+
       // Day-name label (e.g. "MON")
       const nameDiv = document.createElement("div");
       nameDiv.className = "day-name";
       nameDiv.innerText = WEEKDAYS[date.getDay()];
- 
+
       // Date label (e.g. "(Apr 14)")
       const dateDiv = document.createElement("div");
       dateDiv.className = "day-date";
       dateDiv.innerText = `(${date.toLocaleString('en-US', { month: 'short', day: 'numeric' })})`;
- 
+
       col.append(nameDiv, dateDiv);
       col.onclick = () => {
         document.querySelectorAll('.day-column').forEach(el => el.classList.remove('selected'));
         col.classList.add('selected');
         loadRoutes(isoDate); // For a given day, this re-calls loadRoutes() and buildSegments() that includes the paved/unpaved logic. But it's a very fast operation (small dataset).
       };
- 
+
       if (!firstRideDate && (rides.length || races.length)) {
         firstRideDate = isoDate;
         firstRideCol  = col;
       }
- 
+
       calendarDiv.appendChild(col);
     }
- 
+
     // Auto-select the first day that has rides, or fall back to default map view
     if (firstRideDate) {
       firstRideCol.classList.add('selected');
@@ -1877,7 +1875,7 @@
       map.jumpTo({ center: [DEFAULT_CENTER[1], DEFAULT_CENTER[0]], zoom: DEFAULT_ZOOM });
     }
   }
- 
+
 })();
 </script>
 
