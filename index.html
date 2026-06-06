@@ -718,28 +718,24 @@
   const maptilerStyleUrl = `https://api.maptiler.com/maps/outdoor-v2/style.json?key=${MAPTILER_API_KEY}`; // Primary map: MapTiler Outdoors. Requires API key. We have 5,000 sessions and 100,000 requests/month for free (https://www.maptiler.com/pricing/)
   const fallbackStyleUrl = 'https://tiles.stadiamaps.com/styles/outdoors.json'; // Fallback: Stadia outdoors. Free, no key required.
 
-  // Start with the fallback style so the map is immediately visible and interactive.
-  // Then probe MapTiler with a HEAD request (no data downloaded) and silently swap
-  // to the richer vector style if the key is valid and quota is available.
+  // Start with MapTiler directly.
+  // If MapTiler fails (e.g., quota exceeded), we catch the style error and swap to Stadia.
   const map = new maplibregl.Map({
     container: 'map',
-    style:     fallbackStyleUrl,
+    style:     maptilerStyleUrl,
     center:    [DEFAULT_CENTER[1], DEFAULT_CENTER[0]], // MapLibre: [lng, lat]
     zoom:      DEFAULT_ZOOM,
     maxZoom:   16,
   });
 
-  fetch(maptilerStyleUrl, { method: 'HEAD' })
-    .then(res => {
-      if (!res.ok) throw new Error();
-      console.log('MapTiler: OK');
-      map.once('style.load', () => {           // Wait for the style to load before trying to plot or replot routes.
-        const selected = document.querySelector('.day-column.selected');
-        if (selected?.dataset.date) loadRoutes(selected.dataset.date);
-      });
-      map.setStyle(maptilerStyleUrl);
-    })
-    .catch(() => console.warn('MapTiler unavailable, keeping Stadia fallback'));
+  // If MapTiler's style fails to load, silently fall back to Stadia.
+  map.on('error', (e) => {
+    if (e.error?.message?.toLowerCase().includes('style') ||
+        e.error?.status === 401 || e.error?.status === 403) {
+      console.warn('MapTiler unavailable, falling back to Stadia');
+      map.setStyle(fallbackStyleUrl, { diff: false });  // Do a clean style replacement
+    }
+  });
 
   // Zoom in/out buttons (compass hidden)
   map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-left');
@@ -764,11 +760,11 @@
   let racesByDate = {};
 
   // Loads initial rides data concurrently and plots them once map is ready
-  //console.time('club_rides.json'); // Testing: check the time to load JSON data.
+  //console.time('[PERF] app start → club_rides.json ready'); // Debugging performance
   const ridesReady = (async () => {
     const res = await fetch('club_rides.json?v=' + Date.now(), { cache: 'no-store' }); // cache: 'no-store' + timestamp ensures we bypass all caching (browser, PWA, server)
     const rides = await res.json();
-    //console.timeEnd('club_rides.json'); // Testing: check the time to load JSON data.
+    //console.timeEnd('[PERF] app start → club_rides.json ready'); // Debugging performance
 
     // Group rides by date (YYYY-MM-DD)
     for (const ride of rides) {
@@ -801,12 +797,11 @@
     }
   })();
 
-  // MapLibre requires addSource/addLayer after the style is ready.
   // Wait for BOTH the map style AND ride data before rendering. Whichever
   // finishes last triggers generateCalendar().
-  //console.time('map style'); // Testing: check the time to load the map style.
+  //console.time('[PERF] app start → map ready'); // Debugging performance
   map.on('load', () => {
-    //console.timeEnd('map style'); // Testing: check the time to load the map style.
+    //console.timeEnd('[PERF] app start → map ready'); // Debugging performance
     Promise.all([ridesReady, racesReady]).then(() => { // Wait for both to finish
       generateCalendar();
     });
