@@ -1270,6 +1270,9 @@
       racesByLocation[key].push(race.name);
     });
 
+    // Tracks checkered race pins so highlightRoute/restoreAllRoutes can dim/restore them
+    const raceMarkers = [];
+
     Object.entries(racesByLocation).forEach(([latlng, names]) => {
       const [lat, lng] = latlng.split(",").map(Number);
       const marker = createPinMarker([lng, lat], null, true);
@@ -1287,7 +1290,9 @@
           if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
         });
       });
-      map._routeMarkers.push(marker.addTo(map));
+      const addedMarker = marker.addTo(map);
+      map._routeMarkers.push(addedMarker);
+      raceMarkers.push(addedMarker);
     });
 
     if (!routes.length && !races.length) {
@@ -1382,6 +1387,8 @@
           l.marker.getElement()?.style.setProperty('filter', filter);
         }
       });
+      // Dim checkered race pins when any route is highlighted
+      raceMarkers.forEach(m => m.getElement()?.style.setProperty('filter', 'grayscale(1) opacity(0.5)'));
       applyStyles(changes);
     }
 
@@ -1399,6 +1406,8 @@
         // Restore pin marker color and opacity
         l.marker.getElement()?.style.removeProperty('filter');
       });
+      // Restore checkered race pins
+      raceMarkers.forEach(m => m.getElement()?.style.removeProperty('filter'));
       applyStyles(changes);
     }
 
