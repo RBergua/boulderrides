@@ -733,6 +733,10 @@
     .then(res => {
       if (!res.ok) throw new Error();
       console.log('MapTiler: OK');
+      map.once('style.load', () => {           // Wait for the style to load before trying to plot or replot routes.
+        const selected = document.querySelector('.day-column.selected');
+        if (selected?.dataset.date) loadRoutes(selected.dataset.date);
+      });
       map.setStyle(maptilerStyleUrl);
     })
     .catch(() => console.warn('MapTiler unavailable, keeping Stadia fallback'));
@@ -903,7 +907,14 @@
             // Re-render the currently selected day
             // This keeps the user's context intact instead of resetting the UI
             const selected = document.querySelector('.day-column.selected');
-            if (selected?.dataset.date) loadRoutes(selected.dataset.date);
+            if (selected?.dataset.date) {
+              // Guard against visibilitychange firing while the map style is still loading
+              if (map.isStyleLoaded()) {
+                loadRoutes(selected.dataset.date);
+              } else {
+                map.once('style.load', () => loadRoutes(selected.dataset.date));
+              }
+            }
             //console.log('Ride data refreshed'); // Testing
           }
 
