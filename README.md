@@ -151,11 +151,23 @@ Race and event data is stored in `races.json`. Data is refreshed weekly from the
 | `type` | array of strings | One or more event type tags (e.g. `"Road Race"`, `"Criterium"`, `"Time Trial"`, `"Mountain Bike"`, `"Special Event"`) and/or sanctioning body (e.g. `"American Cycling Association"`, `"Colorado Bicycle Racing Association (CBRA)"`) |
 | `date` | string or array of strings | Event date in `YYYY-MM-DD` format; use a plain string for single-day events, or an array of strings for multi-day events (e.g. a stage race) |
 
+## Using the Data
+
+The ride and race data is publicly available and you are welcome to use it in your own projects under the terms of the [MIT license](LICENSE).
+
+**Ride data** (updated twice daily at 12 PM & 1 AM):
+[`club_rides.json`](https://raw.githubusercontent.com/RBergua/boulderrides/main/club_rides.json)
+
+**Race and event data** (updated weekly on Mondays at 3 AM):
+[`races.json`](https://raw.githubusercontent.com/RBergua/boulderrides/main/races.json)
+
+The data schemas are documented in the sections above. If you build something with this data, a link back to [boulderrides.cc](https://boulderrides.cc) is appreciated. For questions or to let us know what you built, reach out at [team@boulderrides.cc](mailto:team@boulderrides.cc).
+
 ## Project Structure
 
 ```
 ├── index.html        # Main app (map + calendar)
-└── club_rides.json   # Ride data, auto-updated by the backend process (Strava and Ride with GPS API). The file is only committed when its contents change
+├── club_rides.json   # Ride data, auto-updated by the backend process (Strava and Ride with GPS API). The file is only committed when its contents change
 └── races.json        # Race and event data, auto-updated by the backend process (BikeReg API). Major events not on BikeReg are hardcoded
 ```
 
@@ -172,7 +184,7 @@ Race and event data is stored in `races.json`. Data is refreshed weekly from the
 - [MapLibre GL JS](https://maplibre.org/) — Interactive maps with vector tile rendering
 - [MapTiler](https://www.maptiler.com/) — Outdoor/terrain map tiles (primary)
 - [Stadia Maps](https://stadiamaps.com/) — Outdoor/terrain vector map tiles (fallback if MapTiler quota is exceeded or unavailable). Free, no API key required
-- [Service Worker](https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API) — Extends MapTiler tile cache from the deault 8 hours to 120 days, saving API requests and making the map load faster for returning visitors (tiles served from disk instead of the network)
+- [Service Worker](https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API) — Extends MapTiler tile cache from the default 8 hours to 120 days, saving API requests and making the map load faster for returning visitors (tiles served from disk instead of the network)
 - [OpenStreetMap](https://www.openstreetmap.org/) — Road surface data source used for paved/unpaved classification, queried via the [Overpass API](https://overpass-api.de/) by the backend
 - [Strava API](https://developers.strava.com/) — Source of group ride data, fetched by the backend
 - [Ride with GPS API](https://ridewithgps.com/api) — Source of group ride data, fetched by the backend
