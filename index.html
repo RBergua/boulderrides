@@ -808,121 +808,159 @@
   });
 
   // -------------------------------
-  // Old routes data in long-lived sessions
+  // Old routes data in long-lived sessions (smart refresh on visibility restore)
   // -------------------------------
-  // Re-fetch rides from JSON file when the user brings the tab or app back to the foreground.
-  let lastDataString = null; // Snapshot of the last fetched data to detect changes
-  let lastFetchTime = 0; // Last time that we performed a fetch
+  // We do a cheap HEAD request for each JSON file and compare the server's Last-Modified
+  // header against the timestamp of our last successful full fetch.
+  // We only download the file body when the server copy is actually newer.
+
+  let lastDataString     = null;    // Snapshot of rides data to detect content changes
+  let lastRidesFetchTime = Date.now(); // Timestamp of our last successful rides fetch
+  let lastRacesFetchTime = Date.now(); // Timestamp of our last successful races fetch
   let calendarAnchorDate = formatLocalDate(new Date()); // The date on which the calendar was last generated
 
-  // Minimum time between refreshes (in ms)
-  // Prevents excessive network calls when users rapidly switch tabs/apps
-  const MIN_REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
+  // Minimum time between HEAD checks.
+  // Prevents excessive network calls when users rapidly switch tabs/apps.
+  const MIN_REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes in ms
+
+  // Returns true if the server file was modified after `lastFetchTime`.
+  // Uses a HEAD request, no body downloaded, so it's very cheap.
+  // Falls back to true (force re-fetch) if the header is missing or the request fails.
+  async function serverFileIsNewer(url, lastFetchTime) {
+    try {
+      const res = await fetch(url, { method: 'HEAD', cache: 'no-store' });
+      const lastModified = res.headers.get('Last-Modified');
+      if (!lastModified) return true; // Header absent → assume old data to be safe
+      return new Date(lastModified).getTime() > lastFetchTime;
+    } catch {
+      return true; // Network error → assume old data so we try a full fetch
+    }
+  }
 
   // Listen for when the tab/app becomes visible again
   // This is especially important for PWA/mobile users who background the app
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') {
-      //console.log('Tab or app became visible!'); // Testing
-      const now = Date.now();
-      const todayDate = formatLocalDate(new Date());
+    if (document.visibilityState !== 'visible') return; // We only refresh when the user returns, not when they leave
 
-      // If the calendar was built on a previous day, rebuild it now
-      // regardless of the MIN_REFRESH_INTERVAL. The day has rolled over!
-      const dayChanged = todayDate !== calendarAnchorDate;
+    const now        = Date.now();
+    const todayDate  = formatLocalDate(new Date());
+    const dayChanged = todayDate !== calendarAnchorDate; // If the calendar was built on a previous day, rebuild it now regardless of the MIN_REFRESH_INTERVAL. The day has rolled over!
 
-      // If we fetched club_rides.json recently and the day has not changed,
-      // skip this refresh. This avoids unnecessary repeated requests from quick tab switching
-      if (!dayChanged && now - lastFetchTime < MIN_REFRESH_INTERVAL) return;
+    // Debounce: skip if we checked both files very recently and the day hasn't rolled over
+    const ridesCheckedRecently = (now - lastRidesFetchTime < MIN_REFRESH_INTERVAL);
+    const racesCheckedRecently = (now - lastRacesFetchTime < MIN_REFRESH_INTERVAL);
+    if (!dayChanged && ridesCheckedRecently && racesCheckedRecently) return;
 
-      // Update last fetch timestamp:
-      lastFetchTime = now;
+    //console.log(`visibilitychange: checking server files…`); // Testing
 
-      // Fetch the latest rides and races JSON data in parallel
-      // cache: 'no-store' + timestamp ensures we bypass all caching (browser, PWA, server)
-      Promise.all([
-        fetch('club_rides.json?v=' + Date.now(), { cache: 'no-store' }).then(r => r.json()),
-        fetch('races.json?v=' + Date.now(), { cache: 'no-store' }).then(r => r.json())
-      ])
-        .then(([rides, races]) => {
+    // Run HEAD checks for files that passed the debounce window (or day changed)
+    const ridesCheck = (!dayChanged && ridesCheckedRecently)
+      ? Promise.resolve(false)                                          // Still fresh. Skip
+      : serverFileIsNewer('club_rides.json', lastRidesFetchTime);       // Request the server
 
-          // Convert rides data to a string so we can compare with previous version
-          // This is a simple way to detect if anything actually changed
+    const racesCheck = (!dayChanged && racesCheckedRecently)
+      ? Promise.resolve(false)
+      : serverFileIsNewer('races.json', lastRacesFetchTime);
+
+    Promise.all([ridesCheck, racesCheck])
+      .then(([ridesNewer, racesNewer]) => {
+
+        // dayChanged forces a full refresh of both files regardless of Last-Modified
+        const fetchRides = dayChanged || ridesNewer;
+        const fetchRaces = dayChanged || racesNewer;
+
+        //console.log(`Rides: ${ridesCheckedRecently && !dayChanged ? 'skipped (debounced)' : ridesNewer ? 'server is newer, downloading…' : 'up to date'}`); // Testing
+        //console.log(`Races: ${racesCheckedRecently && !dayChanged ? 'skipped (debounced)' : racesNewer ? 'server is newer, downloading…' : 'up to date'}`); // Testing
+
+        // Nothing on the server has changed. We're done
+        if (!fetchRides && !fetchRaces) return;
+
+        const ridesFetch = fetchRides
+          ? fetch('club_rides.json?v=' + now, { cache: 'no-store' }).then(r => r.json())
+          : Promise.resolve(null);
+
+        const racesFetch = fetchRaces
+          ? fetch('races.json?v=' + now, { cache: 'no-store' }).then(r => r.json())
+          : Promise.resolve(null);
+
+        return Promise.all([ridesFetch, racesFetch]);
+      })
+      .then(result => {
+        if (!result) return; // Both files were fresh. Nothing to do
+
+        const [rides, races] = result;
+
+        // ── Update rides ──────────────────────────────────────────────────────
+        let ridesChanged = false;
+        if (rides !== null) {
+          lastRidesFetchTime = now;
+
           const newDataString = JSON.stringify(rides);
+          ridesChanged = (newDataString !== lastDataString);
+          lastDataString = newDataString;
 
-          // Rebuild ridesByDate from scratch with fresh data
-          const newRidesByDate = {};
-          rides.forEach(ride => {
-            const date = ride.date.split(" ")[0]; // Extract YYYY-MM-DD
-            if (!newRidesByDate[date]) newRidesByDate[date] = [];
-            newRidesByDate[date].push(ride);
-          });
+          if (ridesChanged) { // Rebuild ridesByDate with fresh data
+            const newRidesByDate = {};
+            rides.forEach(ride => {
+              const date = ride.date.split(" ")[0]; // Extract YYYY-MM-DD
+              if (!newRidesByDate[date]) newRidesByDate[date] = [];
+              newRidesByDate[date].push(ride);
+            });
+            ridesByDate = newRidesByDate;
+            console.log('Rides changed: map will re-render'); // Testing
+          }
+        }
+        // ── Update races ──────────────────────────────────────────────────────
+        if (races !== null) {
+          lastRacesFetchTime = now;
 
-          // Rebuild racesByDate and allRaces from scratch with fresh data
           const newRacesByDate = {};
           races.forEach(race => {
             const dates = Array.isArray(race.date) ? race.date : [race.date];
             dates.forEach(date => {
-              const iso = formatLocalDate(parseLocalDate(date)); // normalize to YYYY-MM-DD, same as initial load
+              const iso = formatLocalDate(parseLocalDate(date));  // normalize to YYYY-MM-DD, same as rides
               if (!newRacesByDate[iso]) newRacesByDate[iso] = [];
               newRacesByDate[iso].push(race);
             });
           });
-
-          // Swap only after fully built (prevents partial state issues)
-          ridesByDate = newRidesByDate;
           racesByDate = newRacesByDate;
           allRaces    = races;
+        }
 
-          // Refresh gray "ride-day" calendar styling without rebuilding the calendar. If rides are added or removed for a date, the corresponding column gets styled or unstyled accordingly.
+        // ── Refresh calendar day highlights ───────────────────────────────────
+        if (ridesChanged || races !== null) {
           document.querySelectorAll('.day-column').forEach(col => {
-            const date = col.dataset.date;
-
-            const hasRides = (ridesByDate[date]?.length || 0) > 0;
-            const hasRaces = (racesByDate[date]?.length || 0) > 0;
-
-            col.classList.toggle('ride-day', hasRides || hasRaces);
+            const date    = col.dataset.date;
+            const hasData = (ridesByDate[date]?.length || 0) > 0 || (racesByDate[date]?.length || 0) > 0;
+            col.classList.toggle('ride-day', hasData);
           });
+        }
 
-          if (dayChanged) {
-            // The calendar is old (built on a previous day). We rebuild it entirely
-            // so today's column is correct.
-            calendarAnchorDate = todayDate;
-            const calendarDiv = document.getElementById("calendar");
-            calendarDiv.innerHTML = ""; // Clear old day columns
-            generateCalendar();
-            //console.log('Day changed — calendar rebuilt'); // Testing
-          } else {
-            // If data hasn't changed, skip all updates (no re-render needed)
-            if (newDataString === lastDataString) {
-              //console.log('No JSON data change, skipping routes update'); // Testing
-              return;
-            }
+        // ── Rebuild calendar if the day rolled over ───────────────────────────
+        if (dayChanged) {
+          calendarAnchorDate = todayDate;
+          const calendarDiv  = document.getElementById("calendar");
+          calendarDiv.innerHTML = ""; // Clear old day columns
+          generateCalendar();
+          //console.log('Day changed: calendar rebuilt'); // Testing
+          return;
+        }
 
-            // Re-render the currently selected day
-            // This keeps the user's context intact instead of resetting the UI
-            const selected = document.querySelector('.day-column.selected');
-            if (selected?.dataset.date) {
-              // Guard against visibilitychange firing while the map style is still loading
-              if (map.isStyleLoaded()) {
-                loadRoutes(selected.dataset.date);
-              } else {
-                map.once('style.load', () => loadRoutes(selected.dataset.date));
-              }
+        // ── Re-render selected day only if rides content actually changed ─────
+        if (ridesChanged) {
+          const selected = document.querySelector('.day-column.selected');
+          if (selected?.dataset.date) {
+            if (map.isStyleLoaded()) {
+              loadRoutes(selected.dataset.date);
+            } else {
+              map.once('style.load', () => loadRoutes(selected.dataset.date));
             }
-            //console.log('Ride data refreshed'); // Testing
           }
-
-          // Save the new snapshot for future comparisons
-          lastDataString = newDataString;
-        })
-        .catch(() => {
-        // Fail silently:
-        // - Keep existing ridesByDate / racesByDate
-        // - Do not interrupt the user experience
-        // - Next visibility event will try again
+        }
+      })
+      .catch(() => {
+        // Fail silently: keep existing data, try again next visibility event
       });
-    }
   });
 
   // -------------------------------
