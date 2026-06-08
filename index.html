@@ -764,6 +764,7 @@
   const ridesReady = (async () => {
     const res = await fetch('club_rides.json?v=' + Date.now(), { cache: 'no-store' }); // cache: 'no-store' + timestamp ensures we bypass all caching (browser, PWA, server)
     const rides = await res.json();
+    lastDataString = JSON.stringify(rides); // Store a snapshot of the data for future change detection
     //console.timeEnd('[PERF] app start → club_rides.json ready'); // Debugging performance
 
     // Group rides by date (YYYY-MM-DD)
@@ -815,8 +816,10 @@
   // We only download the file body when the server copy is actually newer.
 
   let lastDataString     = null;    // Snapshot of rides data to detect content changes
-  let lastRidesFetchTime = Date.now(); // Timestamp of our last successful rides fetch
-  let lastRacesFetchTime = Date.now(); // Timestamp of our last successful races fetch
+  let lastRidesFetchTime  = Date.now(); // time of last full body download
+  let lastRacesFetchTime  = Date.now(); // time of last full body download
+  let lastRidesCheckTime  = Date.now(); // time of last HEAD check (or fetch)
+  let lastRacesCheckTime  = Date.now(); // time of last HEAD check (or fetch)
   let calendarAnchorDate = formatLocalDate(new Date()); // The date on which the calendar was last generated
 
   // Minimum time between HEAD checks.
@@ -829,11 +832,12 @@
   async function serverFileIsNewer(url, lastFetchTime) {
     try {
       const res = await fetch(url, { method: 'HEAD', cache: 'no-store' });
+      if (!res.ok) return false;              // Server error → keep old data
       const lastModified = res.headers.get('Last-Modified');
-      if (!lastModified) return true; // Header absent → assume old data to be safe
+      if (!lastModified) return true; // Header absent but server reachable → re-fetch to be safe
       return new Date(lastModified).getTime() > lastFetchTime;
     } catch {
-      return true; // Network error → assume old data so we try a full fetch
+      return false; // No network / server unreachable → keep old data
     }
   }
 
@@ -847,8 +851,8 @@
     const dayChanged = todayDate !== calendarAnchorDate; // If the calendar was built on a previous day, rebuild it now regardless of the MIN_REFRESH_INTERVAL. The day has rolled over!
 
     // Debounce: skip if we checked both files very recently and the day hasn't rolled over
-    const ridesCheckedRecently = (now - lastRidesFetchTime < MIN_REFRESH_INTERVAL);
-    const racesCheckedRecently = (now - lastRacesFetchTime < MIN_REFRESH_INTERVAL);
+    const ridesCheckedRecently = (now - lastRidesCheckTime < MIN_REFRESH_INTERVAL);
+    const racesCheckedRecently = (now - lastRacesCheckTime < MIN_REFRESH_INTERVAL);
     if (!dayChanged && ridesCheckedRecently && racesCheckedRecently) return;
 
     //console.log(`visibilitychange: checking server files…`); // Testing
@@ -865,9 +869,23 @@
     Promise.all([ridesCheck, racesCheck])
       .then(([ridesNewer, racesNewer]) => {
 
-        // dayChanged forces a full refresh of both files regardless of Last-Modified
-        const fetchRides = dayChanged || ridesNewer;
-        const fetchRaces = dayChanged || racesNewer;
+        // Update check timestamps
+        if (!ridesCheckedRecently || dayChanged) lastRidesCheckTime = now;
+        if (!racesCheckedRecently || dayChanged) lastRacesCheckTime = now;
+
+        // Rebuild calendar if the day rolled over (always, regardless of data)
+        // ── Rebuild calendar if the day rolled over ───────────────────────────
+        if (dayChanged) {
+          calendarAnchorDate = todayDate;
+          const calendarDiv  = document.getElementById("calendar");
+          calendarDiv.innerHTML = ""; // Clear old day columns
+          generateCalendar();
+          //console.log('Day changed: calendar rebuilt'); // Testing
+        }
+
+        // Data-driven decisions: only download if server is actually newer
+        const fetchRides = ridesNewer;
+        const fetchRaces = racesNewer;
 
         //console.log(`Rides: ${ridesCheckedRecently && !dayChanged ? 'skipped (debounced)' : ridesNewer ? 'server is newer, downloading…' : 'up to date'}`); // Testing
         //console.log(`Races: ${racesCheckedRecently && !dayChanged ? 'skipped (debounced)' : racesNewer ? 'server is newer, downloading…' : 'up to date'}`); // Testing
@@ -934,16 +952,6 @@
             const hasData = (ridesByDate[date]?.length || 0) > 0 || (racesByDate[date]?.length || 0) > 0;
             col.classList.toggle('ride-day', hasData);
           });
-        }
-
-        // ── Rebuild calendar if the day rolled over ───────────────────────────
-        if (dayChanged) {
-          calendarAnchorDate = todayDate;
-          const calendarDiv  = document.getElementById("calendar");
-          calendarDiv.innerHTML = ""; // Clear old day columns
-          generateCalendar();
-          //console.log('Day changed: calendar rebuilt'); // Testing
-          return;
         }
 
         // ── Re-render selected day only if rides content actually changed ─────
