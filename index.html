@@ -855,7 +855,7 @@
     const racesCheckedRecently = (now - lastRacesCheckTime < MIN_REFRESH_INTERVAL);
     if (!dayChanged && ridesCheckedRecently && racesCheckedRecently) return;
 
-    console.log(`visibilitychange: checking server files…`); // Testing
+    //console.log(`visibilitychange: checking server files…`); // Testing
 
     // Run HEAD checks for files that passed the debounce window (or day changed)
     const ridesCheck = (!dayChanged && ridesCheckedRecently)
@@ -887,8 +887,8 @@
         const fetchRides = ridesNewer;
         const fetchRaces = racesNewer;
 
-        console.log(`Rides: ${ridesCheckedRecently && !dayChanged ? 'skipped (debounced)' : ridesNewer ? 'server is newer, downloading…' : 'up to date'}`); // Testing
-        console.log(`Races: ${racesCheckedRecently && !dayChanged ? 'skipped (debounced)' : racesNewer ? 'server is newer, downloading…' : 'up to date'}`); // Testing
+        //console.log(`Rides: ${ridesCheckedRecently && !dayChanged ? 'skipped (debounced)' : ridesNewer ? 'server is newer, downloading…' : 'up to date'}`); // Testing
+        //console.log(`Races: ${racesCheckedRecently && !dayChanged ? 'skipped (debounced)' : racesNewer ? 'server is newer, downloading…' : 'up to date'}`); // Testing
 
         // Nothing on the server has changed. We're done
         if (!fetchRides && !fetchRaces) return;
@@ -925,7 +925,7 @@
               newRidesByDate[date].push(ride);
             });
             ridesByDate = newRidesByDate;
-            console.log('Rides changed: map will re-render'); // Testing
+            //console.log('Rides changed: map will re-render'); // Testing
           }
         }
         // ── Update races ──────────────────────────────────────────────────────
