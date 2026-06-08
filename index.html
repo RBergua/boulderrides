@@ -277,6 +277,48 @@
     /* Hide bottom-sheet entirely on desktop */
     @media (pointer: fine) { #ride-sheet { display: none !important; } }
 
+    /* ── Loading overlay ──────────────────────────────────────────────────────
+       Covers the full screen while the map style and ride data are being fetched.
+       Fades out once generateCalendar() has run */
+    #loading-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;            /* above everything, including the map */
+      background: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      transition: opacity 0.4s ease;
+    }
+    /* Adding .hidden triggers the fade-out; pointer-events:none lets map clicks through immediately */
+    #loading-overlay.hidden { opacity: 0; pointer-events: none; }
+
+    #loading-label {
+      font-size: 1em;
+      color: #555;
+      font-family: Arial, sans-serif;
+    }
+
+    /* Gray track that holds the blue fill bar */
+    #loading-bar-track {
+      width: 220px;
+      height: 6px;
+      background: #e0e0e0;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    /* Blue fill. Width is driven by setProgress() in JS */
+    #loading-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: #007bff;
+      border-radius: 3px;
+      transition: width 0.3s ease;
+    }
+
     /* Remove MapLibre GL JS focus outline on routes */
     .maplibregl-canvas:focus { outline: none; }
 
@@ -344,6 +386,14 @@
   </style>
 </head>
 <body>
+
+<!-- Loading overlay: shown until map + data are ready, then fades out -->
+<div id="loading-overlay">
+  <div id="loading-label">Loading group rides…</div>
+  <div id="loading-bar-track">
+    <div id="loading-bar-fill"></div>
+  </div>
+</div>
 
 <!-- Day-picker calendar strip -->
 <div id="calendar"></div>
@@ -713,6 +763,27 @@
     }
   })();
 
+  // Loading overlay helpers (progress bar)
+  // setProgress(pct, label) advances the blue fill bar to `pct` % and optionally
+  // updates the status label.
+  // hideLoadingOverlay() snaps the bar to 100 %, waits 1000 ms for the fill
+  // transition to finish (e.g., map zooming), then fades the overlay out via the .hidden class.
+  const loadingOverlay = document.getElementById('loading-overlay');
+  const loadingBarFill = document.getElementById('loading-bar-fill');
+  const loadingLabel   = document.getElementById('loading-label');
+  let   _progress      = 0;
+
+  function setProgress(pct, label) {
+    _progress = Math.max(_progress, pct);       // never go backward
+    loadingBarFill.style.width = _progress + '%';
+    if (label) loadingLabel.textContent = label;
+  }
+
+  function hideLoadingOverlay() {
+    setProgress(100);                           // snap bar to full
+    setTimeout(() => loadingOverlay.classList.add('hidden'), 1000); // wait for fill transition, then fade out
+  }
+
   // API key is locked to boulderrides.cc domain. Safe to expose in the frontend.
   const MAPTILER_API_KEY = 'dD2px0qif6MjSZvVnAOB';
   const maptilerStyleUrl = `https://api.maptiler.com/maps/outdoor-v2/style.json?key=${MAPTILER_API_KEY}`; // Primary map: MapTiler Outdoors. Requires API key. We have 5,000 sessions and 100,000 requests/month for free (https://www.maptiler.com/pricing/)
@@ -736,6 +807,8 @@
       map.setStyle(fallbackStyleUrl, { diff: false });  // Do a clean style replacement
     }
   });
+
+  setProgress(10, 'Loading group rides…');     // milestone 1: map object created
 
   // Zoom in/out buttons (compass hidden)
   map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-left');
@@ -766,6 +839,7 @@
     const rides = await res.json();
     lastDataString = JSON.stringify(rides); // Store a snapshot of the data for future change detection
     //console.timeEnd('[PERF] app start → club_rides.json ready'); // Debugging performance
+    setProgress(50, 'Loading races…');          // milestone 2: ride data ready
 
     // Group rides by date (YYYY-MM-DD)
     for (const ride of rides) {
@@ -785,6 +859,7 @@
   const racesReady = (async () => {
     const res = await fetch('races.json?v=' + Date.now(), { cache: 'no-store' }); // cache: 'no-store' + timestamp ensures we bypass all caching (browser, PWA, server)
     allRaces = await res.json();
+    setProgress(75, 'Preparing map…');          // milestone 3: race data ready
 
     // Group races by date (YYYY-MM-DD). A multi-day race is indexed under each of its dates.
     for (const race of allRaces) {
@@ -803,8 +878,10 @@
   //console.time('[PERF] app start → map ready'); // Debugging performance
   map.on('load', () => {
     //console.timeEnd('[PERF] app start → map ready'); // Debugging performance
+    setProgress(90, 'Almost there…');           // milestone 4: map style loaded
     Promise.all([ridesReady, racesReady]).then(() => { // Wait for both to finish
       generateCalendar();
+      hideLoadingOverlay();                     // milestone 5: all done — fade out overlay
     });
   });
 
