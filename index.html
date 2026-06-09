@@ -759,7 +759,7 @@
       window._bannerHeightPx = BANNER_HEIGHT_PX;
 
     } catch (e) {
-      // Fail silently — banner simply won't appear
+      // Fail silently. Banner simply won't appear
     }
   })();
 
@@ -782,6 +782,15 @@
   function hideLoadingOverlay() {
     setProgress(100);                           // snap bar to full
     setTimeout(() => loadingOverlay.classList.add('hidden'), 1000); // wait for fill transition, then fade out
+  }
+
+  // Shows again the same full-screen overlay used on first load.
+  // Called when the app is restored after ≥5 min or the day has rolled over.
+  function showLoadingOverlay(label) {
+    _progress = 0;                              // reset bar to empty
+    loadingBarFill.style.width = '0%';
+    loadingLabel.textContent = label || 'Loading group rides…';
+    loadingOverlay.classList.remove('hidden'); // make it visible again
   }
 
   // API key is locked to boulderrides.cc domain. Safe to expose in the frontend.
@@ -808,7 +817,7 @@
     }
   });
 
-  setProgress(10, 'Loading group rides…');     // milestone 1: map object created
+  setProgress(10, 'Loading group rides…');     // Progress bar. Milestone 1: map object created
 
   // Zoom in/out buttons (compass hidden)
   map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-left');
@@ -839,7 +848,7 @@
     const rides = await res.json();
     lastDataString = JSON.stringify(rides); // Store a snapshot of the data for future change detection
     //console.timeEnd('[PERF] app start → club_rides.json ready'); // Debugging performance
-    setProgress(50, 'Loading races…');          // milestone 2: ride data ready
+    setProgress(50, 'Loading races…');          // Progress bar. Milestone 2: ride data ready
 
     // Group rides by date (YYYY-MM-DD)
     for (const ride of rides) {
@@ -859,7 +868,7 @@
   const racesReady = (async () => {
     const res = await fetch('races.json?v=' + Date.now(), { cache: 'no-store' }); // cache: 'no-store' + timestamp ensures we bypass all caching (browser, PWA, server)
     allRaces = await res.json();
-    setProgress(75, 'Preparing map…');          // milestone 3: race data ready
+    setProgress(75, 'Preparing map…');          // Progress bar. Milestone 3: race data ready
 
     // Group races by date (YYYY-MM-DD). A multi-day race is indexed under each of its dates.
     for (const race of allRaces) {
@@ -878,10 +887,10 @@
   //console.time('[PERF] app start → map ready'); // Debugging performance
   map.on('load', () => {
     //console.timeEnd('[PERF] app start → map ready'); // Debugging performance
-    setProgress(90, 'Almost there…');           // milestone 4: map style loaded
+    setProgress(90, 'Almost there…');           // Progress bar. Milestone 4: map style loaded
     Promise.all([ridesReady, racesReady]).then(() => { // Wait for both to finish
       generateCalendar();
-      hideLoadingOverlay();                     // milestone 5: all done — fade out overlay
+      hideLoadingOverlay();                     // Progress bar. Milestone 5: all done — fade out overlay
     });
   });
 
@@ -927,10 +936,14 @@
     const todayDate  = formatLocalDate(new Date());
     const dayChanged = todayDate !== calendarAnchorDate; // If the calendar was built on a previous day, rebuild it now regardless of the MIN_REFRESH_INTERVAL. The day has rolled over!
 
-    // Debounce: skip if we checked both files very recently and the day hasn't rolled over
+    // Debounce: skip if we checked both files very recently (e.g., ≤5 min)and the day hasn't rolled over
     const ridesCheckedRecently = (now - lastRidesCheckTime < MIN_REFRESH_INTERVAL);
     const racesCheckedRecently = (now - lastRacesCheckTime < MIN_REFRESH_INTERVAL);
     if (!dayChanged && ridesCheckedRecently && racesCheckedRecently) return;
+
+    // Show the full-screen loading overlay. This is the same one as app startup
+    showLoadingOverlay('Refreshing ride data…'); // Progress bar. Milestone 1: user returned. We see this always, regardless of new data
+    setProgress(10);
 
     //console.log(`visibilitychange: checking server files…`); // Testing
 
@@ -968,7 +981,9 @@
         //console.log(`Races: ${racesCheckedRecently && !dayChanged ? 'skipped (debounced)' : racesNewer ? 'server is newer, downloading…' : 'up to date'}`); // Testing
 
         // Nothing on the server has changed. We're done
-        if (!fetchRides && !fetchRaces) return;
+        if (!fetchRides && !fetchRaces) { hideLoadingOverlay(); return; }
+
+        setProgress(40, 'Loading rides…'); // Progress bar. Milestone 2: data downloaded
 
         const ridesFetch = fetchRides
           ? fetch('club_rides.json?v=' + now, { cache: 'no-store' }).then(r => r.json())
@@ -982,6 +997,8 @@
       })
       .then(result => {
         if (!result) return; // Both files were fresh. Nothing to do
+
+        setProgress(75, 'Preparing map…'); // Progress bar. Milestone 3: race data ready
 
         const [rides, races] = result;
 
@@ -1042,9 +1059,11 @@
             }
           }
         }
+        hideLoadingOverlay();
       })
       .catch(() => {
         // Fail silently: keep existing data, try again next visibility event
+        hideLoadingOverlay();
       });
   });
 
