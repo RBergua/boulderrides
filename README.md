@@ -22,6 +22,7 @@ It aggregates **Strava and Ride with GPS club events** and displays upcoming rid
 ![Boulder Group Rides demo](demo.gif)
 
 ## Live version
+The frontend is a static website hosted on GitHub Pages, served directly from the repository.
 
 - **Primary site:** https://boulderrides.cc  
 - **GitHub Pages:** https://rbergua.github.io/boulderrides/
@@ -177,13 +178,14 @@ The data schemas are documented in the sections above. If you build something wi
 - **Default map center** — Update `defaultCenter` in `index.html` (currently set to downtown Boulder)
 - **Default zoom** — Update `defaultZoom` (currently `12`)
 - **Route colors** — Edit the `colors` palette array in `index.html` to change the cycle of colors assigned to routes
-- **Map tiles** — The app loads Stadia Maps immediately (no key required) so the map is instantly visible, then silently upgrades to MapTiler (outdoor/terrain) if the key is valid and quota is available. The MapTiler API key is locked to requests from `boulderrides.cc`
+- **Map tiles** — The app loads MapTiler (outdoor/terrain) as the primary tile source. If MapTiler fails (e.g., quota exceeded or not available), it silently falls back to Stadia Maps. The MapTiler API key is locked to requests from `boulderrides.cc`
+
 
 ## Built With
 
 - [MapLibre GL JS](https://maplibre.org/) — Interactive maps with vector tile rendering
 - [MapTiler](https://www.maptiler.com/) — Outdoor/terrain map tiles (primary)
-- [Stadia Maps](https://stadiamaps.com/) — Outdoor/terrain vector map tiles (fallback if MapTiler quota is exceeded or unavailable). Free, no API key required
+- [Stadia Maps](https://stadiamaps.com/) — Outdoor/terrain vector map tiles (fallback if MapTiler is not unavailable). Free, no API key required
 - [Service Worker](https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API) — Extends MapTiler tile cache from the default 8 hours to 120 days, saving API requests and making the map load faster for returning visitors (tiles served from disk instead of the network)
 - [OpenStreetMap](https://www.openstreetmap.org/) — Road surface data source used for paved/unpaved classification, queried via the [Overpass API](https://overpass-api.de/) by the backend
 - [Strava API](https://developers.strava.com/) — Source of group ride data, fetched by the backend
