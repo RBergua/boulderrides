@@ -13,18 +13,6 @@
     "date": "2026-06-03"
   },
   {
-    "name": "Tuesday Night Thunder",
-    "url": "https://sanitassports.us/collections/tnt-tuesday-night-thunder-series",
-    "reg_link": "https://docs.google.com/forms/d/e/1FAIpQLSeyk0ObW8gsCewB9n13069mI21kah7573TO7kMLE-m5XQRLIg/viewform?pli=1",
-    "location": "Louisville",
-    "latitude": 39.970987,
-    "longitude": -105.11585,
-    "type": [
-      "Criterium"
-    ],
-    "date": "2026-06-09"
-  },
-  {
     "name": "Peak to Peak Training Systems Training Race Series at South Table Mountain",
     "url": "https://peaktopeak.trainingtiltapp.com/",
     "reg_link": "http://www.BikeReg.com/75532",
@@ -343,5 +331,30 @@
       "Recreational"
     ],
     "date": "2026-08-08"
+  },
+  {
+    "name": "Tuesday Night Thunder",
+    "url": "https://sanitassports.us/collections/tnt-tuesday-night-thunder-series",
+    "reg_link": "https://docs.google.com/forms/d/e/1FAIpQLSeyk0ObW8gsCewB9n13069mI21kah7573TO7kMLE-m5XQRLIg/viewform?pli=1",
+    "location": "Louisville",
+    "latitude": 39.970987,
+    "longitude": -105.11585,
+    "type": [
+      "Criterium"
+    ],
+    "date": "2026-08-11"
+  },
+  {
+    "name": "Peak to Peak Training Systems Training Race Series at South Table Mountain",
+    "url": "https://peaktopeak.trainingtiltapp.com/",
+    "reg_link": "http://www.BikeReg.com/75532",
+    "location": "Golden",
+    "latitude": 39.755543,
+    "longitude": -105.2210997,
+    "type": [
+      "Road Race",
+      "Criterium"
+    ],
+    "date": "2026-08-12"
   }
 ]
