@@ -185,7 +185,7 @@ The data schemas are documented in the sections above. If you build something wi
 
 - [MapLibre GL JS](https://maplibre.org/) — Interactive maps with vector tile rendering
 - [MapTiler](https://www.maptiler.com/) — Outdoor/terrain map tiles (primary)
-- [Stadia Maps](https://stadiamaps.com/) — Outdoor/terrain vector map tiles (fallback if MapTiler is not unavailable). Free, no API key required
+- [Stadia Maps](https://stadiamaps.com/) — Outdoor/terrain vector map tiles (fallback if MapTiler is not available). Free, no API key required
 - [Service Worker](https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API) — Extends MapTiler tile cache from the default 8 hours to 120 days, saving API requests and making the map load faster for returning visitors (tiles served from disk instead of the network)
 - [OpenStreetMap](https://www.openstreetmap.org/) — Road surface data source used for paved/unpaved classification, queried via the [Overpass API](https://overpass-api.de/) by the backend
 - [Strava API](https://developers.strava.com/) — Source of group ride data, fetched by the backend
