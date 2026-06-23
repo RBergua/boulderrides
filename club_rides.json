@@ -26542,8 +26542,8 @@
     ],
     "women_only": false,
     "route_id": 3503941884959815694,
-    "distance": 25.8,
-    "elevation_gain": 3254,
+    "distance": 23.0,
+    "elevation_gain": 3506,
     "route": [
       [
         40.06205,
@@ -128482,7 +128482,7 @@
     "source": "Strava",
     "club_id": 1881055,
     "club_name": "Fast & Flat",
-    "title": "\u203c\ufe0f Canceled June 21st \u203c\ufe0f",
+    "title": "Lon Hagler Loop",
     "date": "2026-06-28 09:00",
     "url": "https://www.strava.com/clubs/1881055/group_events/3468637087455516510",
     "starting_location": [
