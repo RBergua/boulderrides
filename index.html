@@ -4,7 +4,7 @@
   <!--
     DEV NOTES
     ─────────
-    Local server : python -m http.server 8000  →  http://localhost:8000
+    Local server : py -m http.server 8000  →  http://localhost:8000
     Mobile test  : F12 → toggle device toolbar
     Hard refresh : Ctrl+Shift+R (Win/Linux) | Cmd+Shift+R (Mac)
   -->
@@ -408,6 +408,15 @@
 
 <!-- Full-screen map -->
 <div id="map"></div>
+
+<!-- Weather widget (top-right gray box) -->
+<div id="weather-widget" style="
+  display:none;
+  position:absolute; top:74px; right:10px; z-index:500; /* 74px = 64px calendar height + 10px gap */
+  background:#fff; color:#333; padding:4px 8px; border-radius:12px;
+  box-shadow:0 2px 8px rgba(0,0,0,0.25);
+  font-family:Arial; font-size:0.9em; line-height:1.4; text-align:center;">
+</div>
 
 <!-- "More" info button (bottom-left, above Races) -->
 <!-- We call openInfoPage() function instead of "document.getElementById('info-page').classList.add('open');" here to refresh the Buy Me a Coffee button -->
@@ -836,7 +845,7 @@
   });
 
   // -------------------------------
-  // Load routes from club_rides.json and races from races.json
+  // Load routes from club_rides.json, races from races.json, and weather from weather.json
   // -------------------------------
   // Rides grouped by date: { "YYYY-MM-DD": [ride, ride, ...], ... }
   let ridesByDate = {};
@@ -886,13 +895,51 @@
     }
   })();
 
-  // Wait for BOTH the map style AND ride data before rendering. Whichever
-  // finishes last triggers generateCalendar().
+  // Load weather from weather.json
+  const ENABLE_WEATHER = true; // Flag to enable/disable weather widget
+
+  // Weather grouped by date: { "YYYY-MM-DD": [ {time, temperature_F, description, symbol}, ... ] }
+  let weatherByDate = {};
+
+  const weatherReady = (async () => {
+    if (!ENABLE_WEATHER) return;
+    try {
+      const res = await fetch('weather.json?v=' + Date.now(), { cache: 'no-store' }); // cache: 'no-store' + timestamp ensures we bypass all caching (browser, PWA, server)
+      weatherByDate = await res.json();
+    } catch {
+      weatherByDate = {}; // Missing/broken file. updateWeather() will just hide the widget
+    }
+  })();
+
+  // Renders the forecast for a given "YYYY-MM-DD" date into the weather widget.
+  // Called once generateCalendar() picks the initial day, and again whenever
+  // the user clicks a different day.
+  function updateWeather(isoDate) {
+    const widget = document.getElementById('weather-widget');
+    if (!ENABLE_WEATHER) return;
+
+    const entries = weatherByDate[isoDate];
+
+    // No data available? Just hide the widget.
+    if (!entries) {
+      widget.style.display = 'none';
+      return;
+    }
+
+    // Render each time slot (e.g. "9 AM", "4 PM") on its own line, separated by a divider.
+    widget.style.display = '';
+    widget.innerHTML = entries.map(e =>
+      `<div><span style="color:#888;">${e.time}</span><br>${e.symbol} <span style="color:#007bff; font-weight:bold;">${e.temperature_F}°</span></div>`
+    ).join('<hr style="border:none; border-top:1px solid #eee; margin:3px 0;">');
+  }
+
+  // Wait for the map style, ride data, race data and weather data before rendering.
+  // Whichever finishes last triggers generateCalendar().
   //console.time('[PERF] app start → map ready'); // Debugging performance
   map.on('load', () => {
     //console.timeEnd('[PERF] app start → map ready'); // Debugging performance
     setProgress(90, 'Almost there…');           // Progress bar. Milestone 4: map style loaded
-    Promise.all([ridesReady, racesReady]).then(() => { // Wait for both to finish
+    Promise.all([ridesReady, racesReady, weatherReady]).then(() => { // Wait for all to finish
       generateCalendar();
       hideLoadingOverlay();                     // Progress bar. Milestone 5: all done — fade out overlay
     });
@@ -1449,6 +1496,7 @@
 
     if (!routes.length && !races.length) {
       map.jumpTo({ center: [DEFAULT_CENTER[1], DEFAULT_CENTER[0]], zoom: DEFAULT_ZOOM });
+      updateWeather(formatLocalDate(today));
       return;
     }
 
@@ -2018,6 +2066,7 @@
         document.querySelectorAll('.day-column').forEach(el => el.classList.remove('selected'));
         col.classList.add('selected');
         loadRoutes(isoDate); // For a given day, this re-calls loadRoutes() and buildSegments() that includes the paved/unpaved logic. But it's a very fast operation (small dataset).
+        updateWeather(isoDate);
       };
 
       if (!firstRideDate && (rides.length || races.length)) {
@@ -2032,6 +2081,7 @@
     if (firstRideDate) {
       firstRideCol.classList.add('selected');
       loadRoutes(firstRideDate);
+      updateWeather(firstRideDate);
     } else {
       map.jumpTo({ center: [DEFAULT_CENTER[1], DEFAULT_CENTER[0]], zoom: DEFAULT_ZOOM });
     }
