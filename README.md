@@ -12,8 +12,8 @@
 > * An active Strava subscription will be required by **June 30, 2026**, to maintain API access.
 > * The Club Activities endpoints on the API will be deprecated on **September 1, 2026**. Strava cited low developer adoption as the reason for discontinuing support. However, it is unclear if the Club Events endpoints are impacted.
 >
-> Meanwhile, Ride with GPS has introduced support for free non-recurring ride events in addition to its paid Club Account offering that includes recurring rides, expanding the options available for group ride organization. 
-> 
+> Meanwhile, Ride with GPS has introduced support for free non-recurring ride events in addition to its paid Club Account offering that includes recurring rides, expanding the options available for group ride organization.
+>
 > We are monitoring these changes and evaluating their impact on the project.
 
 An interactive map showing **cycling group rides in Boulder, Colorado**.
@@ -24,7 +24,7 @@ It aggregates **Strava and Ride with GPS club events** and displays upcoming rid
 ## Live version
 The frontend is a static website hosted on GitHub Pages, served directly from the repository.
 
-- **Primary site:** https://boulderrides.cc  
+- **Primary site:** https://boulderrides.cc
 - **GitHub Pages:** https://rbergua.github.io/boulderrides/
 
 ## Features
@@ -56,7 +56,7 @@ python -m http.server 8000
 Then open [http://localhost:8000](http://localhost:8000) in your browser.
 
 > **Tip:** Hard refresh (`Ctrl+Shift+R` on Windows/Linux, `Cmd+Shift+R` on Mac) forces the browser to re-download all files instead of using cached versions.
- 
+
 > **Tip:** To emulate a mobile device, open browser DevTools (`F12`) and toggle the device toolbar.
 
 ## Ride Data Format
@@ -152,6 +152,37 @@ Race and event data is stored in `races.json`. Data is refreshed weekly from the
 | `type` | array of strings | One or more event type tags (e.g. `"Road Race"`, `"Criterium"`, `"Time Trial"`, `"Mountain Bike"`, `"Special Event"`) and/or sanctioning body (e.g. `"American Cycling Association"`, `"Colorado Bicycle Racing Association (CBRA)"`) |
 | `date` | string or array of strings | Event date in `YYYY-MM-DD` format; use a plain string for single-day events, or an array of strings for multi-day events (e.g. a stage race) |
 
+## Weather Data Format
+
+Weather data is stored in `weather.json`. Data is fetched daily from the National Weather Service at 5 AM and 11 AM and corresponds to downtown Boulder. Each entry in the array represents one day:
+
+```json
+{
+  "2026-06-30": [
+    {
+      "time": "9 AM",
+      "temperature_F": 70,
+      "description": "Sunny",
+      "symbol": "☀️"
+    },
+    {
+      "time": "4 PM",
+      "temperature_F": 87,
+      "description": "Slight Chance Showers And Thunderstorms",
+      "symbol": "🌩️"
+    }
+  ]
+}
+```
+
+| Field | Type | Description |
+|---|---|---|
+| (key) | string | Forecast date in `YYYY-MM-DD` format |
+| `time` | string | Forecast time, (Daylight Savings Time (summer): `"9 AM"` and `"4 PM"`, Standard Time (winter): `"10 AM"` and `"2 PM"`) |
+| `temperature_F` | number | Temperature in degrees Fahrenheit (converted to Celsius in the frontend when Metric is selected) |
+| `description` | string | Short text description of conditions (e.g. `"Sunny"`, `"Mostly Sunny"`, `"Chance Showers And Thunderstorms"`) |
+| `symbol` | string | Emoji representing the forecast (e.g. `"☀️"`, `"🌤️"`, `"🌩️"`) |
+
 ## Using the Data
 
 The ride and race data is publicly available and you are welcome to use it in your own projects under the terms of the [MIT license](LICENSE).
@@ -169,7 +200,8 @@ The data schemas are documented in the sections above. If you build something wi
 ```
 ├── index.html        # Main app (map + calendar)
 ├── club_rides.json   # Ride data, auto-updated by the backend process (Strava and Ride with GPS API). The file is only committed when its contents change
-└── races.json        # Race and event data, auto-updated by the backend process (BikeReg API). Major events not on BikeReg are hardcoded
+├── races.json        # Race and event data, auto-updated by the backend process (BikeReg API). Major events not on BikeReg are hardcoded
+└── weather.json      # Weather data, auto-updated by the backend process (National Weather Service API)
 ```
 
 ## Customization
@@ -191,6 +223,7 @@ The data schemas are documented in the sections above. If you build something wi
 - [Strava API](https://developers.strava.com/) — Source of group ride data, fetched by the backend
 - [Ride with GPS API](https://ridewithgps.com/api) — Source of group ride data, fetched by the backend
 - [BikeReg API](https://www.bikereg.com/) — Source of race and event data, fetched by the backend
+- [National Weather Service API](https://www.weather.gov/documentation/services-web-api) — Weather forecasts, fetched by the backend
 - [GoatCounter](https://www.goatcounter.com/) — Privacy-friendly analytics
 
 ## Support
