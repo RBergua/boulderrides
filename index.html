@@ -786,6 +786,20 @@
       // keeping routes from being drawn underneath the banner.
       window._bannerHeightPx = BANNER_HEIGHT_PX;
 
+      // If there is a banner, the weather widget won't fit at the top in the mobile version.
+      //   Desktop: leave the weather widget at its position. There is plenty of room.
+      //   Mobile: relocate it to the bottom-left, next to the More / Races / Metric buttons.
+      const weatherWidget = document.getElementById('weather-widget');
+      if (weatherWidget) {
+        if (isTouchDevice) {
+          weatherWidget.style.top    = 'auto';
+          weatherWidget.style.bottom = '9px';   // align with #metric-btn
+          weatherWidget.style.left   = '100px'; // clears the 72px-wide button column (left:16px)
+          weatherWidget.style.right  = 'auto';
+        }
+        // Desktop: no change. Weather widget stays at its default top-right position.
+      }
+
     } catch (e) {
       // Fail silently. Banner simply won't appear
     }
