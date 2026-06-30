@@ -1,0 +1,50 @@
+{
+  "2026-06-30": [
+    {
+      "time": "4 PM",
+      "temperature_c": 30,
+      "description": "Partly Sunny",
+      "symbol": "⛅"
+    }
+  ],
+  "2026-07-01": [
+    {
+      "time": "4 PM",
+      "temperature_c": 31,
+      "description": "Slight Chance Rain Showers",
+      "symbol": "🌧️"
+    }
+  ],
+  "2026-07-02": [
+    {
+      "time": "4 PM",
+      "temperature_c": 32,
+      "description": "Mostly Sunny",
+      "symbol": "🌤️"
+    }
+  ],
+  "2026-07-03": [
+    {
+      "time": "4 PM",
+      "temperature_c": 35,
+      "description": "Mostly Sunny",
+      "symbol": "🌤️"
+    }
+  ],
+  "2026-07-04": [
+    {
+      "time": "4 PM",
+      "temperature_c": 32,
+      "description": "Sunny",
+      "symbol": "☀️"
+    }
+  ],
+  "2026-07-05": [
+    {
+      "time": "4 PM",
+      "temperature_c": 32,
+      "description": "Chance Showers And Thunderstorms",
+      "symbol": "⚡"
+    }
+  ]
+}
