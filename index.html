@@ -928,9 +928,12 @@
 
     // Render each time slot (e.g. "9 AM", "4 PM") on its own line, separated by a divider.
     widget.style.display = '';
-    widget.innerHTML = entries.map(e =>
-      `<div><span style="color:#888;">${e.time}</span><br>${e.symbol} <span style="color:#007bff; font-weight:bold;">${e.temperature_F}°</span></div>`
-    ).join('<hr style="border:none; border-top:1px solid #eee; margin:3px 0;">');
+    widget.innerHTML = entries.map(e => {
+      const temp = metricUnits // Output in Celsius or Fahrenheit
+        ? Math.round((e.temperature_F - 32) * 5 / 9) + '°C' // From °F to °C. No decimal positions
+        : e.temperature_F + '°F';
+      return `<div><span style="color:#888;">${e.time}</span><br>${e.symbol} <span style="color:#007bff; font-weight:bold;">${temp}</span></div>`;
+    }).join('<hr style="border:none; border-top:1px solid #eee; margin:3px 0;">');
   }
 
   // Wait for the map style, ride data, race data and weather data before rendering.
@@ -1141,7 +1144,10 @@
     metricUnits = !metricUnits;
     metricBtn.classList.toggle('active', metricUnits);
     const selected = document.querySelector('.day-column.selected');
-    if (selected?.dataset.date) loadRoutes(selected.dataset.date);
+    if (selected?.dataset.date) {
+      loadRoutes(selected.dataset.date);
+      updateWeather(selected.dataset.date);
+    }
   });
 
   // Swipe down to close
