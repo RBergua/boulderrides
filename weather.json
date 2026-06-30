@@ -10,7 +10,7 @@
       "time": "4 PM",
       "temperature_F": 87,
       "description": "Slight Chance Showers And Thunderstorms",
-      "symbol": "⚡"
+      "symbol": "🌩️"
     }
   ],
   "2026-07-01": [
@@ -80,7 +80,7 @@
       "time": "4 PM",
       "temperature_F": 89,
       "description": "Chance Showers And Thunderstorms",
-      "symbol": "⚡"
+      "symbol": "🌩️"
     }
   ],
   "2026-07-06": [
@@ -94,7 +94,7 @@
       "time": "4 PM",
       "temperature_F": 93,
       "description": "Slight Chance Showers And Thunderstorms",
-      "symbol": "⚡"
+      "symbol": "🌩️"
     }
   ]
 }
