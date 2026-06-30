@@ -3,14 +3,14 @@
     {
       "time": "9 AM",
       "temperature_c": 21,
-      "description": "Patchy Smoke",
-      "symbol": "🌫️"
+      "description": "Sunny",
+      "symbol": "☀️"
     },
     {
       "time": "4 PM",
-      "temperature_c": 30,
-      "description": "Partly Sunny",
-      "symbol": "⛅"
+      "temperature_c": 31,
+      "description": "Slight Chance Showers And Thunderstorms",
+      "symbol": "⚡"
     }
   ],
   "2026-07-01": [
@@ -22,9 +22,9 @@
     },
     {
       "time": "4 PM",
-      "temperature_c": 31,
-      "description": "Slight Chance Rain Showers",
-      "symbol": "🌧️"
+      "temperature_c": 30,
+      "description": "Mostly Sunny",
+      "symbol": "🌤️"
     }
   ],
   "2026-07-02": [
@@ -44,13 +44,13 @@
   "2026-07-03": [
     {
       "time": "9 AM",
-      "temperature_c": 25,
+      "temperature_c": 23,
       "description": "Sunny",
       "symbol": "☀️"
     },
     {
       "time": "4 PM",
-      "temperature_c": 35,
+      "temperature_c": 34,
       "description": "Mostly Sunny",
       "symbol": "🌤️"
     }
@@ -73,8 +73,8 @@
     {
       "time": "9 AM",
       "temperature_c": 23,
-      "description": "Sunny",
-      "symbol": "☀️"
+      "description": "Mostly Sunny",
+      "symbol": "🌤️"
     },
     {
       "time": "4 PM",
@@ -89,6 +89,12 @@
       "temperature_c": 24,
       "description": "Mostly Sunny",
       "symbol": "🌤️"
+    },
+    {
+      "time": "4 PM",
+      "temperature_c": 34,
+      "description": "Slight Chance Showers And Thunderstorms",
+      "symbol": "⚡"
     }
   ]
 }
