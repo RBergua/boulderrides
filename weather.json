@@ -2,13 +2,13 @@
   "2026-06-30": [
     {
       "time": "9 AM",
-      "temperature_c": 21,
+      "temperature_F": 70,
       "description": "Sunny",
       "symbol": "☀️"
     },
     {
       "time": "4 PM",
-      "temperature_c": 31,
+      "temperature_F": 87,
       "description": "Slight Chance Showers And Thunderstorms",
       "symbol": "⚡"
     }
@@ -16,13 +16,13 @@
   "2026-07-01": [
     {
       "time": "9 AM",
-      "temperature_c": 22,
+      "temperature_F": 71,
       "description": "Sunny",
       "symbol": "☀️"
     },
     {
       "time": "4 PM",
-      "temperature_c": 30,
+      "temperature_F": 86,
       "description": "Mostly Sunny",
       "symbol": "🌤️"
     }
@@ -30,13 +30,13 @@
   "2026-07-02": [
     {
       "time": "9 AM",
-      "temperature_c": 22,
+      "temperature_F": 72,
       "description": "Sunny",
       "symbol": "☀️"
     },
     {
       "time": "4 PM",
-      "temperature_c": 32,
+      "temperature_F": 90,
       "description": "Mostly Sunny",
       "symbol": "🌤️"
     }
@@ -44,13 +44,13 @@
   "2026-07-03": [
     {
       "time": "9 AM",
-      "temperature_c": 23,
+      "temperature_F": 74,
       "description": "Sunny",
       "symbol": "☀️"
     },
     {
       "time": "4 PM",
-      "temperature_c": 34,
+      "temperature_F": 93,
       "description": "Mostly Sunny",
       "symbol": "🌤️"
     }
@@ -58,13 +58,13 @@
   "2026-07-04": [
     {
       "time": "9 AM",
-      "temperature_c": 25,
+      "temperature_F": 77,
       "description": "Mostly Sunny",
       "symbol": "🌤️"
     },
     {
       "time": "4 PM",
-      "temperature_c": 32,
+      "temperature_F": 89,
       "description": "Sunny",
       "symbol": "☀️"
     }
@@ -72,13 +72,13 @@
   "2026-07-05": [
     {
       "time": "9 AM",
-      "temperature_c": 23,
+      "temperature_F": 74,
       "description": "Mostly Sunny",
       "symbol": "🌤️"
     },
     {
       "time": "4 PM",
-      "temperature_c": 32,
+      "temperature_F": 89,
       "description": "Chance Showers And Thunderstorms",
       "symbol": "⚡"
     }
@@ -86,13 +86,13 @@
   "2026-07-06": [
     {
       "time": "9 AM",
-      "temperature_c": 24,
+      "temperature_F": 76,
       "description": "Mostly Sunny",
       "symbol": "🌤️"
     },
     {
       "time": "4 PM",
-      "temperature_c": 34,
+      "temperature_F": 93,
       "description": "Slight Chance Showers And Thunderstorms",
       "symbol": "⚡"
     }
