@@ -89,6 +89,12 @@
       "temperature_F": 78,
       "description": "Mostly Sunny",
       "symbol": "🌤️"
+    },
+    {
+      "time": "4 PM",
+      "temperature_F": 93,
+      "description": "Slight Chance Showers And Thunderstorms",
+      "symbol": "🌩️"
     }
   ]
 }
