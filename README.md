@@ -61,7 +61,7 @@ Then open [http://localhost:8000](http://localhost:8000) in your browser.
 
 ## Ride Data Format
 
-Ride data is automatically fetched from the Strava and Ride with GPS API by a backend process that runs twice a day (12 PM & 1 AM) and keeps `club_rides.json` up to date. Each entry in the array represents one ride:
+Ride data is automatically fetched from the Strava and Ride with GPS API by a backend process that runs twice a day (12 PM & 1 AM) and keeps `club_rides.json` in the `data` branch up to date. Each entry in the array represents one ride:
 
 ```json
 [
@@ -114,7 +114,7 @@ Ride data is automatically fetched from the Strava and Ride with GPS API by a ba
 
 ## Race and Events Data Format
 
-Race and event data is stored in `races.json`. Data is refreshed weekly from the BikeReg API (Mondays at 3 AM). Some major events not listed on BikeReg (e.g., Triple Bypass, Mt. Blue Sky Hill Climb, Tuesday Night Thunder) are hardcoded in the backend. Each entry in the array represents one race or event:
+Race and event data is stored in `races.json` in the `data` branch. Data is refreshed weekly from the BikeReg API (Mondays at 3 AM). Some major events not listed on BikeReg (e.g., Triple Bypass, Mt. Blue Sky Hill Climb, Tuesday Night Thunder) are hardcoded in the backend. Each entry in the array represents one race or event:
 
 ```json
 [
@@ -154,7 +154,7 @@ Race and event data is stored in `races.json`. Data is refreshed weekly from the
 
 ## Weather Data Format
 
-Weather data is stored in `weather.json`. Data is fetched daily from the National Weather Service at 5 AM and 11 AM and corresponds to downtown Boulder. Each entry in the array represents one day:
+Weather data is stored in `weather.json` in the `data` branch. Data is fetched daily from the National Weather Service at 5 AM and 11 AM and corresponds to downtown Boulder. Each entry in the array represents one day:
 
 ```json
 {
