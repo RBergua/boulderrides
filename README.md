@@ -13,7 +13,7 @@ This branch holds the JSON data files consumed by the Boulder Rides website.
 ## How it works
  
 A backend process running in a server fetches fresh data and pushes updates to this branch. The backend commits **by amending the single existing commit** (`git commit --amend`) rather than adding a new one. 
-This keeps the branch permanently at 3 commits (one per JSON file), so the repository size never grows no matter how many times the files are updated.
+This keeps the branch permanently at 1 commit, so the repository size never grows no matter how many times the JSON files are updated.
  
 ## Branches
  
