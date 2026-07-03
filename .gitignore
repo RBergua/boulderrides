@@ -10,3 +10,6 @@ Strava_requests.py
 manifest.json
 BikeReg_requests.py
 NWS_weather.py
+club_rides.json
+races.json
+weather.json
