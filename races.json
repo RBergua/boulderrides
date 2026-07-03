@@ -26,19 +26,6 @@
     "date": "2026-06-10"
   },
   {
-    "name": "Thunder Valley Short Track Mountain Bike Race Series",
-    "url": "https://www.velocityventures.bike/events/thunder-valley-short-track",
-    "reg_link": "http://www.BikeReg.com/76362",
-    "location": "Morrison",
-    "latitude": 39.7023717,
-    "longitude": -105.1979076,
-    "type": [
-      "Mountain Bike",
-      "Colorado Bicycle Racing Association (CBRA)"
-    ],
-    "date": "2026-06-16"
-  },
-  {
     "name": "Peak to Peak Training Systems Training Race Series at South Table Mountain",
     "url": "https://peaktopeak.trainingtiltapp.com/",
     "reg_link": "http://www.BikeReg.com/75532",
@@ -50,19 +37,6 @@
       "Criterium"
     ],
     "date": "2026-06-17"
-  },
-  {
-    "name": "Thunder Valley Short Track Mountain Bike Race Series",
-    "url": "https://www.velocityventures.bike/events/thunder-valley-short-track",
-    "reg_link": "http://www.BikeReg.com/76362",
-    "location": "Morrison",
-    "latitude": 39.7023717,
-    "longitude": -105.1979076,
-    "type": [
-      "Mountain Bike",
-      "Colorado Bicycle Racing Association (CBRA)"
-    ],
-    "date": "2026-06-23"
   },
   {
     "name": "Peak to Peak Training Systems Training Race Series at South Table Mountain",
@@ -78,19 +52,6 @@
     "date": "2026-06-24"
   },
   {
-    "name": "Thunder Valley Short Track Mountain Bike Race Series",
-    "url": "https://www.velocityventures.bike/events/thunder-valley-short-track",
-    "reg_link": "http://www.BikeReg.com/76362",
-    "location": "Morrison",
-    "latitude": 39.7023717,
-    "longitude": -105.1979076,
-    "type": [
-      "Mountain Bike",
-      "Colorado Bicycle Racing Association (CBRA)"
-    ],
-    "date": "2026-06-30"
-  },
-  {
     "name": "Peak to Peak Training Systems Training Race Series at South Table Mountain",
     "url": "https://peaktopeak.trainingtiltapp.com/",
     "reg_link": "http://www.BikeReg.com/75532",
@@ -104,19 +65,6 @@
     "date": "2026-07-01"
   },
   {
-    "name": "Thunder Valley Short Track Mountain Bike Race Series",
-    "url": "https://www.velocityventures.bike/events/thunder-valley-short-track",
-    "reg_link": "http://www.BikeReg.com/76362",
-    "location": "Morrison",
-    "latitude": 39.7023717,
-    "longitude": -105.1979076,
-    "type": [
-      "Mountain Bike",
-      "Colorado Bicycle Racing Association (CBRA)"
-    ],
-    "date": "2026-07-07"
-  },
-  {
     "name": "Peak to Peak Training Systems Training Race Series at South Table Mountain",
     "url": "https://peaktopeak.trainingtiltapp.com/",
     "reg_link": "http://www.BikeReg.com/75532",
@@ -128,30 +76,6 @@
       "Criterium"
     ],
     "date": "2026-07-08"
-  },
-  {
-    "name": "Triple Bypass",
-    "url": "https://www.triplebypass.org",
-    "reg_link": "https://runsignup.com/Race/CO/Evergreen/TripleBypass",
-    "location": "Evergreen",
-    "latitude": 39.75821,
-    "longitude": -105.684059,
-    "type": [
-      "Gran Fondo"
-    ],
-    "date": "2026-07-11"
-  },
-  {
-    "name": "Ned Gravel",
-    "url": "http://nedgravel.com",
-    "reg_link": "http://www.BikeReg.com/73348",
-    "location": "Nederland",
-    "latitude": 39.9613759,
-    "longitude": -105.5108312,
-    "type": [
-      "Gravel"
-    ],
-    "date": "2026-07-12"
   },
   {
     "name": "Tuesday Night Thunder",
@@ -345,17 +269,36 @@
     "date": "2026-08-19"
   },
   {
-    "name": "High Plain Bank's Andrea Koenig Crit Championships presented by Lefthand Brewing and Hunt Wheels",
-    "url": "https://www.sanitassports.us",
-    "reg_link": "http://www.BikeReg.com/76587",
-    "location": "Longmont",
-    "latitude": 40.1663371,
-    "longitude": -105.1079888,
+    "name": "The Gold Rush Omnium Colorado Crit Week Presented by HUNT WHEELS and TENDEG",
+    "url": "http://www.sanitassports.us",
+    "reg_link": "http://www.BikeReg.com/77090",
+    "location": "Louisville",
+    "latitude": 39.977763,
+    "longitude": -105.1319296,
     "type": [
       "Road Race",
-      "Criterium",
       "Colorado Bicycle Racing Association (CBRA)"
     ],
-    "date": "2026-08-23"
+    "date": [
+      "2026-08-20",
+      "2026-08-21",
+      "2026-08-22",
+      "2026-08-23"
+    ]
+  },
+  {
+    "name": "Oredigger MTB Challenge",
+    "url": "",
+    "reg_link": "http://www.BikeReg.com/76418",
+    "location": "Black Hawk",
+    "latitude": 39.81139,
+    "longitude": -105.497105,
+    "type": [
+      "Mountain Bike"
+    ],
+    "date": [
+      "2026-09-12",
+      "2026-09-13"
+    ]
   }
 ]

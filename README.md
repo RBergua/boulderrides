@@ -1,6 +1,6 @@
 # Data Branch
  
-This branch holds the JSON data files consumed by the Boulder Rides website.
+This branch holds the JSON data files consumed by the frontend.
  
 ## Files
  
@@ -9,11 +9,13 @@ This branch holds the JSON data files consumed by the Boulder Rides website.
 | `weather.json` | Weather forecast for Boulder, CO fetched from the National Weather Service |
 | `club_rides.json` | Upcoming club rides fetched from Strava and Ride With GPS |
 | `races.json` | Upcoming races fetched from BikeReg |
- 
+
+Each file is only staged and committed if its fetched content has actually changed.
+
 ## How it works
  
-A backend process running in a server fetches fresh data and pushes updates to this branch. The backend commits **by amending the single existing commit** (`git commit --amend`) rather than adding a new one. 
-This keeps the branch permanently at 1 commit, so the repository size never grows no matter how many times the JSON files are updated.
+A backend process running on a server fetches fresh data and pushes updates to this branch. The backend commits **by amending the last commit** (`git commit --amend`) rather than adding a new one, so routine data updates never add new commits to the branch. This keeps the repository from growing in size over time.
+Manual edits to files on this branch (such as this README) are made as normal commits.
  
 ## Branches
  
