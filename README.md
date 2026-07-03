@@ -199,7 +199,7 @@ The data schemas are documented in the sections above. If you build something wi
 
 ```
 ├── index.html        # Main app (map + calendar)
-├── club_rides.json   # Ride data, auto-updated by the backend process (Strava and Ride with GPS API). The file is only committed when its contents change
+├── club_rides.json   # Ride data, auto-updated by the backend process (Strava and Ride with GPS API)
 ├── races.json        # Race and event data, auto-updated by the backend process (BikeReg API). Major events not on BikeReg are hardcoded
 └── weather.json      # Weather data, auto-updated by the backend process (National Weather Service API)
 ```
