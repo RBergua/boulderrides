@@ -188,10 +188,10 @@ Weather data is stored in `weather.json`. Data is fetched daily from the Nationa
 The ride and race data is publicly available and you are welcome to use it in your own projects under the terms of the [MIT license](LICENSE).
 
 **Ride data** (updated twice daily at 12 PM & 1 AM):
-[`club_rides.json`](https://raw.githubusercontent.com/RBergua/boulderrides/main/club_rides.json)
+[`club_rides.json`](https://raw.githubusercontent.com/RBergua/boulderrides/data/club_rides.json)
 
 **Race and event data** (updated weekly on Mondays at 3 AM):
-[`races.json`](https://raw.githubusercontent.com/RBergua/boulderrides/main/races.json)
+[`races.json`](https://raw.githubusercontent.com/RBergua/boulderrides/data/races.json)
 
 The data schemas are documented in the sections above. If you build something with this data, a link back to [boulderrides.cc](https://boulderrides.cc) is appreciated. For questions or to let us know what you built, reach out at [team@boulderrides.cc](mailto:team@boulderrides.cc).
 
