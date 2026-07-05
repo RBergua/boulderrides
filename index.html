@@ -1534,7 +1534,7 @@
 
     if (!routes.length && !races.length) {
       map.jumpTo({ center: [DEFAULT_CENTER[1], DEFAULT_CENTER[0]], zoom: DEFAULT_ZOOM });
-      updateWeather(formatLocalDate(today));
+      updateWeather(date); // Update weather for the selected date, even if there are no rides or races
       return;
     }
 
