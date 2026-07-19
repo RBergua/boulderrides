@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!--
+    NOTES
+    ─────────
+    Single HTML file that fetches JSON data and renders it in the browser: boulderrides.cc/gpx/
+  -->
+<!-- Character encoding -->
+<meta charset="UTF-8">
+
+<!-- Viewport -->
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Page identity -->
+<title>GPX Downloads · Boulder Group Rides</title>
+
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: Arial;
+    margin: 0;
+    background: #fff;
+    color: #222;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Tables format. */
+  table, th, td, .gpx-btn {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+
+  /* ---------- Header: title/subtitle on the left, unit toggle on the right ---------- */
+  header {
+    background: #fff;
+    padding: 16px;
+    border-bottom: 1px solid #eee;
+    position: sticky; /* Header stays visible while scrolling */
+    top: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  header h1 { font-size: 1.6rem; margin: 0 0 4px; color: #007bff; }
+  header p { margin: 0; font-size: 0.82rem; color: #888; }
+  .unit-btn {
+    flex-shrink: 0;
+    background: #777;
+    color: #fff;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: bold;
+  }
+  .unit-btn.active { background: #007bff; }
+  .unit-btn:active { transform: scale(0.98); }
+
+  /* Close button: links back to the main site instead of closing an overlay. */
+  .close-btn {
+    flex-shrink: 0;
+    background: #007bff;
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    padding: 8px 16px;
+    font-size: 0.9rem;
+    font-weight: bold;
+    line-height: 1.2;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    transition: background 0.2s;
+  }
+  .close-btn:hover, .close-btn:active { background: #0056b3; }
+
+  #intro {
+    background: #f0f6ff;
+    padding: 12px 16px;
+    margin: 12px 12px 12px;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    line-height: 1.7;
+    color: #333;
+  }
+  #intro a { color: #007bff; text-decoration: underline; }
+
+  /* ---------- Loading / error message shown before data is ready ---------- */
+  #status { padding: 40px 16px; text-align: center; color: #888; font-size: 0.9rem; }
+
+  /* ---------- One heading + one table per day ---------- */
+  #days { padding: 12px; }
+  .day-section { margin-bottom: 40px; } /* spacing between days */
+  .day-section:last-child { margin-bottom: 15; } /* Small space after last day */
+  .day-heading {
+    font-size: 1.15rem;
+    font-weight: bold;
+    color: #007bff;
+    margin: 0 0 8px;
+  }
+
+  /* ---------- Table: fixed layout + percentage widths so it always fits the
+     screen width with no horizontal scrolling; text wraps instead ---------- */
+  table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    background: #fff;
+    border-radius: 10px;
+    overflow: hidden; /* prevents horizontal scrollbars */
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  th, td {
+    text-align: left;
+    padding: 8px 6px;
+    border-bottom: 1px solid #eee;
+    font-size: 0.78rem;
+    word-wrap: break-word;
+  }
+  th { background: #fafafa; font-weight: 600; color: #333; }
+  tr:last-child td { border-bottom: none; }
+
+  /* Column widths: Club / Ride / Distance / Elev. Gain / Save */
+  th:nth-child(1), td:nth-child(1) { width: 21%; }
+  th:nth-child(2), td:nth-child(2) { width: 30%; }
+  th:nth-child(3), td:nth-child(3) { width: 18%; }
+  th:nth-child(4), td:nth-child(4) { width: 18%; }
+  th:nth-child(5), td:nth-child(5) { width: 13%; text-align: center; }
+
+  /* Distance / Elev. Gain headers are tappable to sort: '▲▼' always
+     shows so users know they're tappable; it turns blue + directional
+     (▲/▼) on whichever column is currently sorted. */
+  th.sortable { cursor: pointer; user-select: none; }
+  th.sortable .arrow { font-size: 0.7em; color: #bbb; margin-left: 2px; }
+  th.sortable.active .arrow { color: #007bff; }
+
+  /* Download link: plain underlined text, no button chrome */
+  .gpx-btn {
+    background: none;
+    border: none;
+    color: #007bff;
+    text-decoration: underline;
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 0;
+    cursor: pointer;
+  }
+  .gpx-btn:active { color: #0056b3; }
+
+  /* Desktop: match the 640px centered content width used by the site's
+    "More" and "Races" full-screen pages (#info-content, #races-content),
+    instead of stretching edge-to-edge on wide screens.
+    Mobile uses 100% width. */
+  @media (min-width: 700px) {
+    header, #intro, #days {
+      max-width: 640px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>GPX Downloads</h1>
+    <p id="subtitle">Loading rides…</p>
+  </div>
+  <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
+    <!-- Hidden until data has loaded; toggles imperial <-> metric units -->
+    <button id="unit-toggle" class="unit-btn" hidden>Metric</button>
+    <button class="close-btn" onclick="window.location.href='https://boulderrides.cc'">✕ Close</button>
+  </div>
+</header>
+
+<p id="intro">
+  Bike computers linked to Strava or Ride with GPS can sync routes automatically.
+  Simply "save" or "star" a route in either app, and it will be sent wirelessly to your device.
+  <br><br>
+  Alternatively, you can download the GPX file below. Customize it
+  using <a href="https://ridewithgps.com" target="_blank" rel="noopener">Ride with GPS</a>
+  (free account) or <a href="https://gpx.studio" target="_blank" rel="noopener">gpx.studio</a> (no account needed).
+</p>
+
+<div id="status">Fetching latest rides…</div>
+
+<div id="days"></div>
+
+<script>
+  // ============================================================
+  // CONFIG
+  // ============================================================
+
+  // Ride data lives on the 'data' branch.
+  // Fetched straight from GitHub raw, same pattern as index.html.
+  // The ?v=timestamp + cache:'no-store' combo bypasses browser/PWA caching.
+  const DATA_BASE_URL = 'https://raw.githubusercontent.com/RBergua/boulderrides/data/';
+
+
+  // ============================================================
+  // UNIT CONVERSION
+  // ============================================================
+
+  let currentUnit = 'imperial'; // 'imperial' | 'metric'
+
+  // Single shared converter for both distance (mi -> km) and elevation
+  // (ft -> m). toLocaleString() adds thousands separators (e.g. "1,000")
+  // and rounds to the given number of decimal places.
+  function fmtMeasurement(value, kmPerImperialUnit, decimals, imperialLabel, metricLabel) {
+    if (currentUnit === 'imperial') {
+      return `${value.toLocaleString(undefined, { maximumFractionDigits: decimals })} ${imperialLabel}`;
+    }
+    const converted = value * kmPerImperialUnit;
+    return `${converted.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals })} ${metricLabel}`;
+  }
+
+  const fmtDistance  = mi => fmtMeasurement(mi, 1.60934, 1, 'mi', 'km');
+  const fmtElevation = ft => fmtMeasurement(ft, 0.3048, 0, 'ft', 'm');
+
+
+  // ============================================================
+  // DATE FORMATTING
+  // ============================================================
+
+  // Turns "2026-07-18" into "Saturday, Jul 18" for the day-section heading.
+  function dayHeading(dateKey) {
+    const d = new Date(dateKey + 'T00:00:00');
+    return d.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+  }
+
+
+  // ============================================================
+  // GPX FILE GENERATION
+  // ============================================================
+
+  // Builds a minimal, valid GPX track from a ride's route array
+  // (each point is [lat, lon, surface]; GPX only needs lat/lon).
+  // <gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1">
+  // tells GPS apps this file follows the official GPX 1.1 schema, at topografix.com
+  function buildGPX(ride) {
+    const trkpts = ride.route
+      .map(([lat, lon]) => `      <trkpt lat="${lat}" lon="${lon}"></trkpt>`) /*Each point becomes one XML line. The 6 leading spaces are just indentation, so the file looks clean. */
+      .join('\n');
+
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="boulderrides.cc" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>${escapeXML(ride.title)}</name>
+    <trkseg>
+${trkpts}
+    </trkseg>
+  </trk>
+</gpx>`;
+  }
+
+  function escapeXML(str) {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); /* Escape &, <, > so the GPX file is valid XML. */
+  }
+
+  // Triggers a browser download of the GPX file for one ride.
+  function downloadGPX(ride) {
+    const blob = new Blob([buildGPX(ride)], { type: 'application/gpx+xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${ride.title.replace(/[^a-z0-9]+/gi, '_')}.gpx`; /* Replace non-alphanumeric characters with underscores. */
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+
+  // ============================================================
+  // TABLE ROW RENDERING
+  // ============================================================
+
+  // Wipes and rebuilds a table body from a (possibly sorted) ride array.
+  // Called both on first render and every time sort order or units change.
+  function renderRows(tbody, dayRides) {
+    tbody.innerHTML = '';
+    dayRides.forEach(ride => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${ride.club_name}</td>
+        <td>${ride.title}</td>
+        <td>${fmtDistance(ride.distance)}</td>
+        <td>${fmtElevation(ride.elevation_gain)}</td>
+        <td><button class="gpx-btn" aria-label="Download GPX">Save</button></td>
+      `;
+      tr.querySelector('.gpx-btn').addEventListener('click', () => downloadGPX(ride));
+      tbody.appendChild(tr);
+    });
+  }
+
+
+  // ============================================================
+  // ONE DAY = ONE HEADING + ONE SORTABLE TABLE
+  // ============================================================
+
+  // Builds a full day section (heading + table) for one date's rides.
+  // `refreshCallbacks` is a shared array (one per page load) that every day
+  // section pushes a "re-render me" function into, so the unit toggle can
+  // refresh all tables at once without losing each table's current sort.
+  function renderDaySection(dateKey, dayRides, refreshCallbacks) {
+    const section = document.createElement('div');
+    section.className = 'day-section';
+
+    const heading = document.createElement('div');
+    heading.className = 'day-heading';
+    heading.textContent = dayHeading(dateKey);
+    section.appendChild(heading);
+
+    const table = document.createElement('table');
+    table.innerHTML = `
+      <thead>
+        <tr>
+          <th>Club</th>
+          <th>Ride</th>
+          <th class="sortable" data-key="distance">Dist.<span class="arrow">▲▼</span></th>
+          <th class="sortable" data-key="elevation_gain">Elev. Gain<span class="arrow">▲▼</span></th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    `;
+    const tbody = table.querySelector('tbody');
+    const sortableHeaders = table.querySelectorAll('th.sortable');
+
+    // `sortedRides` holds this table's current row order. Reassigned on
+    // every sort click; the refresh callback below always reads whatever
+    // it currently points to, thanks to closure.
+    let sortedRides = dayRides.slice(); // start in original scheduled order
+    renderRows(tbody, sortedRides);
+    refreshCallbacks.push(() => renderRows(tbody, sortedRides));
+
+    let activeKey = null;
+    let ascending = true;
+    sortableHeaders.forEach(th => {
+      th.addEventListener('click', () => {
+        const key = th.dataset.key;
+        // Clicking the already-active column flips direction;
+        // clicking a different column starts fresh at ascending.
+        ascending = (activeKey === key) ? !ascending : true;
+        activeKey = key;
+
+        sortableHeaders.forEach(t => {
+          t.classList.toggle('active', t === th);
+          t.querySelector('.arrow').textContent = (t === th) ? (ascending ? '▲' : '▼') : '▲▼';
+        });
+
+        sortedRides = dayRides.slice().sort((a, b) =>
+          ascending ? a[key] - b[key] : b[key] - a[key]
+        );
+        renderRows(tbody, sortedRides);
+      });
+    });
+
+    section.appendChild(table);
+    return section;
+  }
+
+
+  // ============================================================
+  // INIT: fetch data, group by day, render, wire up the unit toggle
+  // ============================================================
+
+  async function init() {
+    let rides;
+    try {
+      const res = await fetch(DATA_BASE_URL + 'club_rides.json?v=' + Date.now(), { cache: 'no-store' });
+      rides = await res.json();
+    } catch (err) {
+      document.getElementById('status').textContent = 'Could not load ride data. Please try again later.';
+      return;
+    }
+
+    // Only rides with a usable route can generate a GPX file
+    rides = rides.filter(r => Array.isArray(r.route) && r.route.length > 1);
+
+    document.getElementById('status').hidden = true;
+    document.getElementById('subtitle').textContent =
+      `${rides.length} upcoming ride${rides.length === 1 ? '' : 's'} with downloadable routes`;
+
+    // Group rides by date (YYYY-MM-DD) so each day gets its own table
+    const byDate = {};
+    rides.forEach(ride => {
+      const dateKey = ride.date.split(' ')[0];
+      (byDate[dateKey] = byDate[dateKey] || []).push(ride);
+    });
+    const sortedDates = Object.keys(byDate).sort();
+
+    const daysEl = document.getElementById('days');
+    const refreshCallbacks = [];
+    sortedDates.forEach(dateKey => {
+      daysEl.appendChild(renderDaySection(dateKey, byDate[dateKey], refreshCallbacks));
+    });
+
+    // Unit toggle: flip state, toggle .active class (same pattern as the
+    // main site's #metric-btn), re-render every table
+    const unitBtn = document.getElementById('unit-toggle');
+    unitBtn.hidden = false;
+    unitBtn.addEventListener('click', () => {
+      currentUnit = currentUnit === 'imperial' ? 'metric' : 'imperial';
+      unitBtn.classList.toggle('active', currentUnit === 'metric');
+      refreshCallbacks.forEach(fn => fn());
+    });
+  }
+
+  init();
+</script>
+
+</body>
+</html>
