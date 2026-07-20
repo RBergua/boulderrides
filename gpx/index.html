@@ -234,13 +234,15 @@
   // ============================================================
 
   // Builds a minimal, valid GPX track from a ride's route array
-  // (each point is [lat, lon, surface]; GPX only needs lat/lon).
+  // (each point is [lat, lon, elevation]).
   // <gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1">
   // tells GPS apps this file follows the official GPX 1.1 schema, at topografix.com
   function buildGPX(ride) {
     const trkpts = ride.route
-      .map(([lat, lon]) => `      <trkpt lat="${lat}" lon="${lon}"></trkpt>`) /*Each point becomes one XML line. The 6 leading spaces are just indentation, so the file looks clean. */
-      .join('\n');
+      .map(([lat, lon, ele]) => `      <trkpt lat="${lat.toFixed(5)}" lon="${lon.toFixed(5)}">
+          <ele>${ele.toFixed(1)}</ele>
+        </trkpt>`)
+      .join("\n");
 
     return `<?xml version="1.0" encoding="UTF-8"?>
 <gpx version="1.1" creator="boulderrides.cc" xmlns="http://www.topografix.com/GPX/1/1">
@@ -366,7 +368,7 @@ ${trkpts}
   async function init() {
     let rides;
     try {
-      const res = await fetch(DATA_BASE_URL + 'club_rides.json?v=' + Date.now(), { cache: 'no-store' });
+      const res = await fetch(DATA_BASE_URL + 'gpx_rides.json?v=' + Date.now(), { cache: 'no-store' });
       rides = await res.json();
     } catch (err) {
       document.getElementById('status').textContent = 'Could not load ride data. Please try again later.';
