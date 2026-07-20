@@ -112,6 +112,42 @@ Ride data is automatically fetched from the Strava and Ride with GPS API by a ba
 | `elevation_gain` | number | Total elevation gain in feet (integer); `null` if unavailable |
 | `route` | `[[lat, lng, surface], ...]` | Array of latitude and longitude coordinates defining the route; each point includes a surface tag (`"paved"` or `"unpaved"`), or `null` if the OpenStreetMap surface classification failed |
 
+Similar information is fetched from the Strava and Ride with GPS API by the same backend process and keeps `gpx_rides.json` in the `data` branch up to date. Each entry in the array represents one ride:
+
+```json
+[
+  {
+    "club_name": "Rapha Boulder",
+    "title": "Social Ride",
+    "date": "2026-03-08 10:00",
+    "distance": 24.8,
+    "elevation_gain": 1247,
+    "route": [
+      [
+        40.01288,
+        -105.29499,
+        1653.0
+      ],
+      [
+        40.01282,
+        -105.29577,
+        1653.6
+      ],
+      ...
+    ]
+  }
+]
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `club_name` | string | Name of the organizing club |
+| `title` | string | Ride name |
+| `date` | string | `"YYYY-MM-DD HH:MM"` in 24-hour format; displayed as 12-hour (AM/PM) in the frontend |
+| `distance` | number | Route distance in miles (1 decimal); `null` if unavailable |
+| `elevation_gain` | number | Total elevation gain in feet (integer); `null` if unavailable |
+| `route` | `[[lat, lng, ele], ...]` | Array of route points, where each point contains latitude, longitude, and elevation in meters (`ele`) for use in the GPX `<ele>` element. Returns `null` if the route stream is unavailable or does not contain matching GPS and elevation data. |
+
 ## Race and Events Data Format
 
 Race and event data is stored in `races.json` in the `data` branch. Data is refreshed weekly from the BikeReg API (Mondays at 3 AM). Some major events not listed on BikeReg (e.g., Triple Bypass, Mt. Blue Sky Hill Climb, Tuesday Night Thunder) are hardcoded in the backend. Each entry in the array represents one race or event:
@@ -189,6 +225,7 @@ The ride and race data is publicly available and you are welcome to use it in yo
 
 **Ride data** (updated twice daily at 12 PM & 1 AM):
 [`club_rides.json`](https://raw.githubusercontent.com/RBergua/boulderrides/data/club_rides.json)
+[`gpx_rides.json`](https://raw.githubusercontent.com/RBergua/boulderrides/data/gpx_rides.json)
 
 **Race and event data** (updated weekly on Mondays at 3 AM):
 [`races.json`](https://raw.githubusercontent.com/RBergua/boulderrides/data/races.json)
@@ -202,7 +239,8 @@ main branch
 └── index.html         # Main app (map + calendar)
 
 data branch
-├── club_rides.json    # Ride data, auto-updated by the backend process (Strava and Ride With GPS API)
+├── club_rides.json    # Ride data (latitude, longitude, surface), auto-updated by the backend process (Strava and Ride With GPS API)
+├── gpx_rides.json     # Ride data (latitude, longitude, elevation), auto-updated by the backend process (Strava and Ride With GPS API)
 ├── races.json         # Race and event data, auto-updated by the backend process (BikeReg API). Major events not on BikeReg are hardcoded
 └── weather.json       # Weather data, auto-updated by the backend process (National Weather Service API)
 ```
