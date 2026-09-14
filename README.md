@@ -103,7 +103,7 @@ Ride data is automatically fetched from the Strava and Ride with GPS API by a ba
 
 ## Race and Events Data Format
 
-Race and event data is stored in `races.json` in the `data` branch. Data is refreshed weekly from the BikeReg API (Mondays at 3 AM). Some major events not listed on BikeReg (e.g., Triple Bypass, Mt. Blue Sky Hill Climb, Tuesday Night Thunder) are hardcoded in the backend. Each entry in the array represents one race or event:
+Race and event data is stored in `races.json` in the `data` branch. Data is refreshed weekly from the BikeReg API (Mondays at 3 AM). Some major events not listed on BikeReg (e.g., Triple Bypass, Mt. Blue Sky Hill Climb, Buffalo Bicycle Classic, Tuesday Night Thunder) are hardcoded in the backend. Each entry in the array represents one race or event:
 
 ```json
 [
