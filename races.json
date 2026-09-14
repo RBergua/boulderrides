@@ -1,32 +1,5 @@
 [
   {
-    "name": "Oredigger MTB Challenge",
-    "url": "",
-    "reg_link": "http://www.BikeReg.com/76418",
-    "location": "Black Hawk",
-    "latitude": 39.81139,
-    "longitude": -105.497105,
-    "type": [
-      "Mountain Bike"
-    ],
-    "date": [
-      "2026-09-12",
-      "2026-09-13"
-    ]
-  },
-  {
-    "name": "Buffalo Bicycle Classic",
-    "url": "https://www.colorado.edu/event/buffalobicycleclassic/",
-    "reg_link": "https://runsignup.com/buffalobicycleclassic",
-    "location": "Boulder",
-    "latitude": 40.00815,
-    "longitude": -105.26519,
-    "type": [
-      "Road, Gravel, Scholarship fundraiser"
-    ],
-    "date": "2026-09-13"
-  },
-  {
     "name": "Cyclocross Series 4-pack",
     "url": "http://www.withoutlimits.co",
     "reg_link": "http://www.BikeReg.com/77096",
@@ -98,5 +71,22 @@
       "Cyclocross"
     ],
     "date": "2026-10-31"
+  },
+  {
+    "name": "Boulder Cup",
+    "url": "https://boulderjuniorcycling.org/boulder-cup/",
+    "reg_link": "http://www.BikeReg.com/77792",
+    "location": "Boulder",
+    "latitude": 40.0298919,
+    "longitude": -105.230497,
+    "type": [
+      "Cyclocross",
+      "UCI Cyclocross Race",
+      "Colorado Bicycle Racing Association (CBRA)"
+    ],
+    "date": [
+      "2026-11-14",
+      "2026-11-15"
+    ]
   }
 ]
