@@ -35,6 +35,7 @@ The frontend is a static website hosted on GitHub Pages, served directly from th
 - **Mobile** — Tap a route or its start pin to see its details in a bottom sheet; tap "View on..." to open the event; swipe the panel down (or tap the map background) to dismiss it and restore all routes
 - **Auto-fit bounds** — The map zooms to fit all routes for the selected day
 - **Races & Events** — Dedicated page listing upcoming races and events
+- **GPX Downloads** — Dedicated page listing upcoming rides with a one-tap GPX download per ride, sortable by distance or elevation gain
 - **Progressive Web App (PWA)** — Installable on Android and iOS home screens for a full-screen, app-like experience with custom splash screens for all device sizes
 
 ## Getting Started
@@ -66,28 +67,19 @@ Ride data is automatically fetched from the Strava and Ride with GPS API by a ba
     "source": "Strava",
     "club_id": 575042,
     "club_name": "Rapha Boulder",
-    "title": "Social Ride",
+    "title": "Gravel to Fritz",
     "date": "2026-03-08 10:00",
     "url": "https://example.com/ride",
-    "starting_location": [
-      40.016888,
-      -105.285529
-    ],
+    "starting_location": [40.01528,-105.24836],
     "women_only": false,
-    "route_id": 3471700207861648642,
-    "distance": 24.8,
-    "elevation_gain": 1247,
+    "route_id": 3524962925431313104,
+    "dist_mi": 41.7,
+    "elev_gain_ft": 1749,
     "route": [
-      [
-        40.01962,
-        -105.27153,
-        "paved"
-      ],
-      [
-        40.0195,
-        -105.27212,
-        "unpaved"
-      ],
+      [40.01478,-105.24793,1603,1],
+      [40.01478,-105.24770,1603,1],
+      [40.01475,-105.24750,1603,1],
+      [40.01478,-105.24697,1603,1],
       ...
     ]
   }
@@ -105,47 +97,9 @@ Ride data is automatically fetched from the Strava and Ride with GPS API by a ba
 | `starting_location` | `[lat, lng]` | Start marker position (optional; if not available, it uses the first point in `route`) |
 | `women_only` | boolean | If `true`, indicates the event is women-only. Since Ride with GPS does not support this flag, the value defaults to `false`. |
 | `route_id` | number | Strava or Ride with GPS route ID |
-| `distance` | number | Route distance in miles (1 decimal); `null` if unavailable |
-| `elevation_gain` | number | Total elevation gain in feet (integer); `null` if unavailable |
-| `route` | `[[lat, lng, surface], ...]` | Array of latitude and longitude coordinates defining the route; each point includes a surface tag (`"paved"` or `"unpaved"`), or `null` if the OpenStreetMap surface classification failed |
-
-Similar information is fetched from the Strava and Ride with GPS API by the same backend process and keeps `gpx_rides.json` in the `data` branch up to date. Each entry in the array represents one ride:
-
-```json
-[
-  {
-    "club_name": "Rapha Boulder",
-    "title": "Social Ride",
-    "date": "2026-03-08 10:00",
-    "url": "https://example.com/ride",
-    "distance": 24.8,
-    "elevation_gain": 1247,
-    "route": [
-      [
-        40.01288,
-        -105.29499,
-        1653.0
-      ],
-      [
-        40.01282,
-        -105.29577,
-        1653.6
-      ],
-      ...
-    ]
-  }
-]
-```
-
-| Field | Type | Description |
-|---|---|---|
-| `club_name` | string | Name of the organizing club |
-| `title` | string | Ride name |
-| `date` | string | `"YYYY-MM-DD HH:MM"` in 24-hour format; displayed as 12-hour (AM/PM) in the frontend |
-| `url` | string | Link to the Strava or Ride with GPS ride event |
-| `distance` | number | Route distance in miles (1 decimal); `null` if unavailable |
-| `elevation_gain` | number | Total elevation gain in feet (integer); `null` if unavailable |
-| `route` | `[[lat, lng, ele], ...]` | Array of route points, where each point contains latitude, longitude, and elevation in meters (`ele`) for use in the GPX `<ele>` element. Returns `null` if the route stream is unavailable or does not contain matching GPS and elevation data. |
+| `dist_mi` | number | Route distance in miles (1 decimal); `null` if unavailable |
+| `elev_gain_ft` | number | Total elevation gain in feet (integer); `null` if unavailable |
+| `route` | `[[lat, lng, altitude, surface], ...]` | Array of latitude and longitude coordinates defining the route; each point includes the altitude in meters (integer) for use in the GPX `<ele>` element, and a surface tag (`0`: unpaved, `1`: paved, or `null` if the OpenStreetMap surface classification failed |
 
 ## Race and Events Data Format
 
@@ -218,28 +172,15 @@ Weather data is stored in `weather.json` in the `data` branch. Data is fetched d
 | `description` | string | Short text description of conditions (e.g. `"Sunny"`, `"Mostly Sunny"`, `"Chance Showers And Thunderstorms"`) |
 | `symbol` | string | Emoji representing the forecast (e.g. `"☀️"`, `"🌤️"`, `"🌩️"`) |
 
-## Using the Data
-
-The ride and race data is publicly available and you are welcome to use it in your own projects under the terms of the [MIT license](LICENSE).
-
-**Ride data** (updated twice daily at 12 PM & 1 AM):
-[`club_rides.json`](https://raw.githubusercontent.com/RBergua/boulderrides/data/club_rides.json)
-[`gpx_rides.json`](https://raw.githubusercontent.com/RBergua/boulderrides/data/gpx_rides.json)
-
-**Race and event data** (updated weekly on Mondays at 3 AM):
-[`races.json`](https://raw.githubusercontent.com/RBergua/boulderrides/data/races.json)
-
-The data schemas are documented in the sections above. If you build something with this data, a link back to [boulderrides.cc](https://boulderrides.cc) is appreciated. For questions or to let us know what you built, reach out at [team@boulderrides.cc](mailto:team@boulderrides.cc).
-
 ## Project Structure
 
 ```
 main branch
-└── index.html         # Main app (map + calendar)
+├── index.html         # Main app (map + calendar)
+└── gpx/index.html     # GPX download page (list of rides with downloadable GPX files)
 
 data branch
-├── club_rides.json    # Ride data (latitude, longitude, surface), auto-updated by the backend process (Strava and Ride With GPS API)
-├── gpx_rides.json     # Ride data (latitude, longitude, elevation), auto-updated by the backend process (Strava and Ride With GPS API)
+├── club_rides.json    # Ride data (latitude, longitude, altitude, surface), auto-updated by the backend process (Strava and Ride With GPS API)
 ├── races.json         # Race and event data, auto-updated by the backend process (BikeReg API). Major events not on BikeReg are hardcoded
 └── weather.json       # Weather data, auto-updated by the backend process (National Weather Service API)
 ```
