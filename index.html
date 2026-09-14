@@ -1334,10 +1334,10 @@
 
     addBadge(formatTime12h(ride.date.split(" ")[1]));
 
-    if (ride.distance != null || ride.elevation_gain != null) {
+    if (ride.dist_mi != null || ride.elev_gain_ft != null) {
       const parts = [
-        ride.distance      != null ? `Distance: ${formatDistance(ride.distance)}`           : '',
-        ride.elevation_gain != null ? `Elev Gain: ${formatElevation(ride.elevation_gain)}` : '',
+        ride.dist_mi       != null ? `Distance: ${formatDistance(ride.dist_mi)}`           : '',
+        ride.elev_gain_ft  != null ? `Elev Gain: ${formatElevation(ride.elev_gain_ft)}`    : '',
       ].filter(Boolean);
       addBadge(parts.join(' | '));
     }
@@ -1473,7 +1473,7 @@
   // ── Step 0 and Step 1 ────────────────────────────────────────────────────────
   // Normalize + smooth surfaces:
   function normalizeSurfaces(route) {
-    const surfaces = route.map(p => p[2] === 'unpaved' ? 'unpaved' : 'paved'); // Only an explicit 'unpaved' string gets the dashed treatment. If there is no surface data available (e.g., null), it will be treated as a continuous line.
+    const surfaces = route.map(p => p[3] === 0 ? 'unpaved' : 'paved'); // Only an explicit 0 (unpaved) gets the dashed treatment. If there is no surface data available (e.g., null), it will be treated as a continuous line.
 
     // Remove isolated "unpaved" noise
     return surfaces.map((s, i) => {
@@ -2134,8 +2134,8 @@
       `<span style="background:${extra ? '#f3f0ff' : '#f0f6ff'}; color:${extra ? '#6f42c1' : '#007bff'}; border:1px solid ${extra ? '#d0c4f7' : '#cce0ff'}; border-radius:20px; padding:4px 12px; font-size:1.2em; font-weight:600;">${text}</span>`;
 
     const distElev = [
-      ride.distance      != null ? `Distance: ${formatDistance(ride.distance)}`           : '',
-      ride.elevation_gain != null ? `Elev Gain: ${formatElevation(ride.elevation_gain)}` : '',
+      ride.dist_mi        != null ? `Distance: ${formatDistance(ride.dist_mi)}`           : '',
+      ride.elev_gain_ft   != null ? `Elev Gain: ${formatElevation(ride.elev_gain_ft)}`    : '',
     ].filter(Boolean).join(' | ');
 
     return `

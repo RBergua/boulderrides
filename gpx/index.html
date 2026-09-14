@@ -243,10 +243,13 @@
   // tells GPS apps this file follows the official GPX 1.1 schema, at topografix.com
   function buildGPX(ride) {
     const trkpts = ride.route
-      .map(([lat, lon, ele]) => `      <trkpt lat="${lat.toFixed(5)}" lon="${lon.toFixed(5)}">
-          <ele>${ele.toFixed(1)}</ele>
-        </trkpt>`)
-      .join("\n");
+      .map(([lat, lon, ele]) => {
+        const eleTag = ele != null ? `
+          <ele>${ele.toFixed(1)}</ele>` : ''; // Omit <ele> entirely when elevation is unknown for this point.
+        return `      <trkpt lat="${lat.toFixed(5)}" lon="${lon.toFixed(5)}">${eleTag}
+          </trkpt>`;
+     })
+     .join("\n");
 
     return `<?xml version="1.0" encoding="UTF-8"?>
 <gpx version="1.1" creator="boulderrides.cc" xmlns="http://www.topografix.com/GPX/1/1">
@@ -300,8 +303,8 @@ ${trkpts}
       tr.innerHTML = `
         <td>${ride.club_name}</td>
         <td>${ride.title}${rideLink}</td>
-        <td>${fmtDistance(ride.distance)}</td>
-        <td>${fmtElevation(ride.elevation_gain)}</td>
+        <td>${fmtDistance(ride.dist_mi)}</td>
+        <td>${fmtElevation(ride.elev_gain_ft)}</td>
         <td><button class="gpx-btn" aria-label="Download GPX">Save</button></td>
       `;
       tr.querySelector('.gpx-btn').addEventListener('click', () => downloadGPX(ride));
@@ -333,8 +336,8 @@ ${trkpts}
         <tr>
           <th>Club</th>
           <th>Ride</th>
-          <th class="sortable" data-key="distance">Dist.<span class="arrow">▲▼</span></th>
-          <th class="sortable" data-key="elevation_gain">Elev. Gain<span class="arrow">▲▼</span></th>
+          <th class="sortable" data-key="dist_mi">Dist.<span class="arrow">▲▼</span></th>
+          <th class="sortable" data-key="elev_gain_ft">Elev. Gain<span class="arrow">▲▼</span></th>
           <th></th>
         </tr>
       </thead>
@@ -384,7 +387,7 @@ ${trkpts}
   async function init() {
     let rides;
     try {
-      const res = await fetch(DATA_BASE_URL + 'gpx_rides.json?v=' + Date.now(), { cache: 'no-store' });
+      const res = await fetch(DATA_BASE_URL + 'club_rides.json?v=' + Date.now(), { cache: 'no-store' });
       rides = await res.json();
     } catch (err) {
       document.getElementById('status').textContent = 'Could not load ride data. Please try again later.';
