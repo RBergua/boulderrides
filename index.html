@@ -1077,8 +1077,14 @@
 
   // Wait for the map style, ride data, race data and weather data before rendering.
   // Whichever finishes last triggers generateCalendar().
+  // Uses 'style.load' instead of 'load': 'load' only fires once. If MapTiler fails
+  // and we swap to the Stadia fallback, 'load' would never fire and the app would stay stuck.
+  // 'style.load' fires for every style change.
   //console.time('[PERF] app start → map ready'); // Debugging performance
-  map.on('load', () => {
+  let mapReady = false;
+  map.on('style.load', () => {
+    if (mapReady) return; // Only run the readiness sequence once
+    mapReady = true;
     //console.timeEnd('[PERF] app start → map ready'); // Debugging performance
     setProgress(90, 'Almost there…');           // Progress bar. Milestone 4: map style loaded
     Promise.all([ridesReady, racesReady, weatherReady]).then(() => { // Wait for all to finish
