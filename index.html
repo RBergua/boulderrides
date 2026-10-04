@@ -1385,11 +1385,11 @@
   const SHOW_SURFACE = true;
 
   // Build a route's draw segments in a single pass over the raw point array.
-  // Each point is [lat, lng, surface] where surface is 'paved' or 'unpaved'.
-  // Returns an array of segments: { latlngs: [[lat, lng], ...], surface: 'paved'|'unpaved' }
+  // Each point is [lat, lng, altitude, surface] where surface is 0 'unpaved' or 1 'paved'.
+  // Returns an array of segments: { latlngs: [[lat, lng], ...], surface: 'paved' | 'unpaved' }
   //
   // Step 0 — input normalization: ensure every point has a valid surface type.
-  // Only an explicit 'unpaved' string gets the dashed treatment.
+  // Only an explicit 0 (unpaved) gets the dashed treatment.
   // If there is no surface data available (e.g., null), it will be treated as a continuous line.
   //
   // Step 1 — smooth: isolated single unpaved points flanked by paved on both
@@ -1401,22 +1401,30 @@
   // We walk through the route point-by-point using spatial proximity detection.
   // The idea is that on the first unpaved, we discretize the route. Later on, we check if new unpaved
   // points are close to the route that was already drawn.
+  // We also keep a running distance along the route ("odometer", in meters). Every grid cell
+  // remembers the odometer reading at which it was first drawn.
   // For each point:
   //  If it's paved:    → always draw
-  //  If it's unpaved:  → check if a nearby point has already been drawn
-  //                      (using a snapped grid ~8m resolution)
-  //                          → if YES (already seen): stop the current segment (prevents overdrawing)
-  //                          → if NO: continue drawing and mark this point as seen
+  //  If it's unpaved:  → check if its grid cell (~8m resolution) was already drawn
+  //                      AND that happened more than MIN_RETRACE_GAP meters ago along the route
+  //                          → if YES (a real retrace): stop the current segment (prevents overdrawing)
+  //                          → if NO: continue drawing and mark the cells of this edge as drawn
+  // Why the distance check matters:
+  //   When GPS points are spaced about as far apart as the grid cell (SNAP_METERS), the next point
+  //   often lands in a cell that was marked a moment ago by the previous edge. Without the distance
+  //   check that looks like a retrace, so one continuous unpaved stretch is cut into many tiny
+  //   segments. Each tiny segment restarts the dash pattern, and the gaps in the dashed line disappear.
+  //   A cell marked only a few meters back is the road we are riding right now, not a retrace.
   // This approach:
-  //   Handles different sampling densities (critical)
+  //   Handles different sampling densities
   //   Handles partial overlaps naturally
-  //   Handles out-and-backs without needing exact matches
+  //   Handles out-and-backs
   // Important:
   //   We deduplicate points, which makes the system robust to GPS noise and uneven point spacing.
 
   // SNAP_METERS defines the resolution of the grid used to detect whether
   // two GPS points are "close enough" to be considered the same location.
-  // And it's also used to discreize the unpaved segments.
+  // And it's also used to discretize the unpaved segments.
   const SNAP_METERS = 8;
   const METERS_PER_DEG = 111111; // grid cell size (m), meters per degree latitude
 
@@ -1449,7 +1457,7 @@
     ];
   }
 
-  // Converts a point into a unique string key for Set storage.
+  // Converts a point into a unique string key for the Map of drawn cells.
   function pointKey(pt) {
     return snapCell(pt[0], pt[1]).join(',');
   }
@@ -1458,8 +1466,11 @@
   // Instead of marking only endpoint of an unpaved segment, we fill the entire
   // edge with intermediate grid points.
   // Without this, return paths or partial overlaps would fail to match.
-  function addEdgePoints(a, b, seenUnpavedPoints) {
-    const steps = Math.max(1, Math.ceil(distanceMeters(a, b) / SNAP_METERS)); // We use the SNAP_METERS to define the discretization!
+  // Each cell is stored together with the distance along the route (in meters) at which
+  // it was first drawn: cumStart is the distance at the start of the edge, edgeLen is the
+  // edge length. If a cell is already in the Map we keep its original (first) distance.
+  function addEdgePoints(a, b, seenUnpavedPoints, cumStart, edgeLen) {
+    const steps = Math.max(1, Math.ceil(edgeLen / SNAP_METERS)); // We use the SNAP_METERS to define the discretization!
 
     for (let i = 0; i <= steps; i++) {
       const t = i / steps;
@@ -1467,7 +1478,11 @@
       const lat = a[0] + (b[0] - a[0]) * t;
       const lng = a[1] + (b[1] - a[1]) * t;
 
-      seenUnpavedPoints.add(pointKey([lat, lng]));
+      const key = pointKey([lat, lng]);
+      // Keep the FIRST distance at which this cell was drawn (don't overwrite it)
+      if (!seenUnpavedPoints.has(key)) {
+        seenUnpavedPoints.set(key, cumStart + edgeLen * t);
+      }
     }
   }
 
@@ -1509,7 +1524,18 @@
     if (route.length < 2) return []; // A segment requires at least 2 points.
 
     const surfaces = normalizeSurfaces(route);
-    const seenUnpavedPoints = new Set(); // Stores all grid cells that have already been drawn for unpaved areas
+
+    // Grid cells already drawn for unpaved areas.
+    // Key: snapped cell. Value: distance along the route (m) when the cell was first drawn.
+    const seenUnpavedPoints = new Map();
+
+    // Running distance along the whole route (m), like an odometer.
+    // Updated for EVERY edge (paved or unpaved) so distances stay correct along the full route.
+    let cum = 0;
+
+    // A cell counts as "already drawn" only if it was first drawn more than this many meters
+    // earlier along the route. Smaller gaps are just the road we are currently on.
+    const MIN_RETRACE_GAP = 3 * SNAP_METERS;
 
     const segments = [];
     let current = null; // active segment
@@ -1541,6 +1567,11 @@
       const curr = route[i];
       const surface = surfaces[i];
 
+      // Advance the odometer for this edge (before the paved/unpaved branch, so paved edges count too)
+      const edgeLen = distanceMeters(prev, curr); // length of this edge in meters
+      const cumStart = cum;                        // distance along the route at the start of this edge
+      cum += edgeLen;                              // distance along the route at the end of this edge
+
       // --- PAVED: always draw continuously---
       if (surface === 'paved') {
         if (!current || current.surface !== 'paved') {
@@ -1553,7 +1584,11 @@
 
       // --- UNPAVED: We only draw if this region hasn't already been covered. ---
       const key = pointKey(curr);
-      const alreadyDrawn = seenUnpavedPoints.has(key);
+      const markedAt = seenUnpavedPoints.get(key); // odometer reading when this cell was first drawn (undefined if never)
+
+      // Retrace = the cell was drawn before AND more than MIN_RETRACE_GAP meters ago along the route.
+      // A cell marked just a few meters back belongs to the road we're on right now, not a retrace.
+      const alreadyDrawn = markedAt !== undefined && (cum - markedAt) > MIN_RETRACE_GAP;
 
       // Debug: only log unpaved points
       // Example of output: ✅ NEW | pt: 556720,-1461598 | raw: 40.083850 -105.235180
@@ -1567,7 +1602,7 @@
       //  );
       //}
 
-      // If this area was already covered, stop current segment
+      // If this area was already covered (a real retrace), stop current segment
       if (alreadyDrawn) {
         // If we're in an unpaved segment, we should CLOSE it at this point
         // instead of discarding the connection entirely. This fixes closed loops.
@@ -1579,8 +1614,9 @@
         continue;
       }
 
-      // Mark entire edge between prev and curr as covered to prevent overdrawing nearby points in the future
-      addEdgePoints(prev, curr, seenUnpavedPoints);
+      // Mark entire edge between prev and curr as covered (with its distance along the route)
+      // to prevent overdrawing nearby points in the future
+      addEdgePoints(prev, curr, seenUnpavedPoints, cumStart, edgeLen);
 
       // Start new unpaved segment if needed
       if (!current || current.surface !== 'unpaved') {
