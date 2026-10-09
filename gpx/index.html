@@ -173,7 +173,7 @@
   <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
     <!-- Hidden until data has loaded; toggles imperial <-> metric units -->
     <button id="unit-toggle" class="unit-btn" hidden>Metric</button>
-    <button class="close-btn" onclick="window.location.href='/'">✕ Close</button> <!-- Opens the home page (relative path) -->
+    <button class="close-btn" onclick="goHome()">✕ Close</button> <!-- Returns to the map -->
   </div>
 </header>
 
@@ -191,6 +191,17 @@
 <div id="days"></div>
 
 <script>
+  // Returns to the map. Prefers history.back() (so the browser can restore the
+  // map page instead of reloading map tiles/data from scratch);
+  // falls back to a fresh navigation if it was not opened from the site.
+  function goHome() {
+    if (document.referrer && new URL(document.referrer).origin === location.origin && history.length > 1) {
+      history.back();
+    } else {
+      window.location.href = '/';
+    }
+  }
+
   // ============================================================
   // CONFIG
   // ============================================================
