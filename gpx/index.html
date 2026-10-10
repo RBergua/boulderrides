@@ -34,18 +34,24 @@
     background: #fff;
     padding: 16px;
     border-bottom: 1px solid #eee;
-    position: sticky; /* Header stays visible while scrolling */
+    position: sticky; /* Header stays visible while scrolling; also anchors .button-row below */
     top: 0;
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 12px;
   }
   header h1 { font-size: 1.6rem; margin: 0 0 4px; color: #007bff; }
   header p { margin: 0; font-size: 0.82rem; color: #888; }
   /* Pushes the title down to the same height as the "More"/"Races" page
      headers, without moving the close button, which already lines up with their close buttons at top:16px. */
   header .title-block { padding-top: 44px; }
+  /* Unit toggle + Close: pinned to the same top-right spot regardless of
+     title/subtitle length, so they never push the title block narrower. */
+  header .button-row {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
   .unit-btn {
     flex-shrink: 0;
     background: #777;
@@ -173,7 +179,7 @@
     <h1>GPX Downloads</h1>
     <p id="subtitle">Loading rides…</p>
   </div>
-  <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
+  <div class="button-row">
     <!-- Hidden until data has loaded; toggles imperial <-> metric units -->
     <button id="unit-toggle" class="unit-btn" hidden>Metric</button>
     <button class="close-btn" onclick="goHome()">✕ Close</button> <!-- Returns to the map -->
