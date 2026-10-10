@@ -244,7 +244,7 @@
     /* Close button: always visibe in the top-right corner */
     #info-close, #races-close {
       position: fixed;
-      top: 14px;
+      top: 16px;
       right: 16px;
       z-index: 2100;
       background: #007bff;
@@ -259,6 +259,9 @@
       transition: background 0.2s;
     }
     #info-close:hover, #races-close:hover { background: #0056b3; }
+    @media (min-width: 700px) {
+      #info-close, #races-close { right: calc(50% - 320px + 16px); }
+    }
 
     /* Info page typography */
     #info-content h1, #races-content h1 { font-size: 1.6em; color: #007bff; margin: 0 0 8px; }

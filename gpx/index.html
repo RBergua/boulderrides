@@ -43,6 +43,9 @@
   }
   header h1 { font-size: 1.6rem; margin: 0 0 4px; color: #007bff; }
   header p { margin: 0; font-size: 0.82rem; color: #888; }
+  /* Pushes the title down to the same height as the "More"/"Races" page
+     headers, without moving the close button, which already lines up with their close buttons at top:16px. */
+  header .title-block { padding-top: 44px; }
   .unit-btn {
     flex-shrink: 0;
     background: #777;
@@ -166,7 +169,7 @@
 <body>
 
 <header>
-  <div>
+  <div class="title-block">
     <h1>GPX Downloads</h1>
     <p id="subtitle">Loading rides…</p>
   </div>
