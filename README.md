@@ -32,7 +32,7 @@ The frontend is a static website hosted on GitHub Pages, served directly from th
 - **Paved vs unpaved surfaces** — Routes are drawn as solid lines on paved surfaces and dashed lines on unpaved surfaces
 - **Start pin markers** — A colored pin marks the starting location of each ride
 - **Desktop** — Hover over a route or its start pin to highlight it and dim the others to gray, showing the club name, ride title, start time, and whether the ride is women-only; click to open the Strava or Ride with GPS event in a new tab
-- **Mobile** — Tap a route or its start pin to see its details in a bottom sheet; tap "View on..." to open the event; swipe the panel down (or tap the map background) to dismiss it and restore all routes
+- **Mobile** — Tap a route or its start pin to see its details in a bottom sheet; tap "View on..." to open the event; tap "weather" (shown only when a detailed forecast is available for that ride) to open the per-ride forecast; swipe the panel down (or tap the map background) to dismiss it and restore all routes
 - **Auto-fit bounds** — The map zooms to fit all routes for the selected day
 - **Races & Events** — Dedicated page listing upcoming races and events
 - **GPX Downloads** — Dedicated page listing upcoming rides with a one-tap GPX download per ride, sortable by distance or elevation gain

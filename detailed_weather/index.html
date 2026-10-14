@@ -70,6 +70,7 @@
   /* One section per chart: a label + its canvas. */
   .chart-block { max-width: 700px; margin: 24px auto; padding: 0 16px; }
   .chart-block h2 { font-size: 1.05rem; color: #333; margin: 0 0 8px; }
+  #weather-note { max-width: 700px; margin: 24px auto; padding: 0 16px 24px; color: #888; font-size: 0.85rem; }
 
   /* Custom legend: we render our own solid/dashed line samples. */
   .legend { display: flex; gap: 16px; margin-bottom: 8px; font-size: 0.85rem; color: #333; }
@@ -104,6 +105,7 @@
   <div class="chart-block"><canvas id="chart-wind"></canvas></div>
   <div class="chart-block" id="windmap-block"><div class="legend"><div class="legend-item">Wind direction</div></div><div id="chart-windmap"></div></div>
   <div class="chart-block"><canvas id="chart-rain"></canvas></div>
+  <p id="weather-note"></p>
 </div>
 
 <script>
@@ -278,7 +280,8 @@
   // divisible by 4 (so the 5 forced ticks all land on whole numbers).
   // Rounds the bounds to a "nice" unit first — e.g. 0-60.
   // `forceMinZero` pins the axis to 0 instead of rounding down to the data's own min.
-  function niceRange(values, forceMinZero = false) {
+  // `padEdges` adds a tick of space when data would otherwise sit near an axis boundary.
+  function niceRange(values, forceMinZero = false, padEdges = false) {
     const dataMin = forceMinZero ? 0 : Math.min(...values);
     const dataMax = Math.max(...values);
     const rough = (dataMax - dataMin || 1) / 4;
@@ -287,10 +290,19 @@
     const residual = rough / magnitude;
     const roundTo = (residual <= 1 ? 1 : residual <= 2 ? 2 : residual <= 5 ? 5 : 10) * magnitude;
 
-    const min = forceMinZero ? 0 : Math.floor(dataMin / roundTo) * roundTo;
+    let min = forceMinZero ? 0 : Math.floor(dataMin / roundTo) * roundTo;
     let max = Math.ceil(dataMax / roundTo) * roundTo;
-    const remainder = (max - min) % 4;
+    let remainder = (max - min) % 4;
     if (remainder !== 0) max += 4 - remainder; // ensure the range is divisible by 4
+
+    if (padEdges) {
+      const tickSize = (max - min) / 4;
+      if (dataMin - min < tickSize / 2) min -= tickSize;
+      if (max - dataMax < tickSize / 2) max += tickSize;
+      remainder = (max - min) % 4;
+      if (remainder !== 0) max += 4 - remainder;
+    }
+
     return { min, max };
   }
 
@@ -398,7 +410,7 @@
   let rideData = null;
   let isMetric = false;
 
-  // Toggled by the °C/°F button; rebuilds the charts in the new unit system.
+  // Toggled by the unit button; rebuilds the charts and note in the new unit system.
   function toggleUnits() {
     isMetric = !isMetric;
     document.getElementById('unit-btn').classList.toggle('active', isMetric);
@@ -430,6 +442,11 @@
     const windUnit = isMetric ? 'km/h' : 'mph';
     const convTemp = v => isMetric ? fToC(v) : v;
     const convWind = v => isMetric ? mphToKmh(v) : v;
+    const averageSpeed = isMetric
+      ? `${mphToKmh(ride.average_speed_mph).toFixed(1)} km/h`
+      : `${ride.average_speed_mph} mph`;
+    document.getElementById('weather-note').textContent =
+      `Data provided by the National Weather Service. Average speed: ${averageSpeed} (including stops).`;
 
     // Builds one series' {x, y} points from a sample field name, applying an optional unit conversion.
     const series = (field, conv = v => v) => ride.samples.map((s, i) => ({ x: sampleMinutes[i], y: conv(s[field]) }));
@@ -444,7 +461,11 @@
     const elevation = elevationRaw && elevationRaw.map(p => ({ x: p.x, y: isMetric ? p.y : p.y * 3.28084 }));
     const elevUnit = isMetric ? 'm' : 'ft';
 
-    const tempRange = niceRange(ride.samples.flatMap(s => [convTemp(s.temp_F), convTemp(s.feels_like_F)]));
+    const tempRange = niceRange(
+      ride.samples.flatMap(s => [convTemp(s.temp_F), convTemp(s.feels_like_F)]),
+      false,
+      true
+    );
     const windRange = niceRange(ride.samples.flatMap(s => [convWind(s.wind_speed_mph), convWind(s.wind_gust_mph)]), true);
 
     drawChart('chart-temp', [
