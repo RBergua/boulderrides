@@ -307,7 +307,7 @@
     #sheet-source-btn:active { background: #e04400; transform: scale(0.98); }
     #sheet-source-btn.no-url { background: #ccc; cursor: default; }
 
-    /* "weather" button: top-right of the bottom sheet, opens the detailed weather page.
+    /* "Weather" button: top-right of the bottom sheet, opens the detailed weather page.
        Hidden by default; openSheet() shows it only when detailed weather is available. */
     #sheet-weather-btn {
       position: absolute; top: 32px; right: 20px;
@@ -503,7 +503,7 @@
 <div id="ride-sheet">
   <div id="sheet-handle"></div>
   <div id="sheet-body">
-    <a id="sheet-weather-btn">weather</a>
+    <a id="sheet-weather-btn">Weather</a>
     <div id="sheet-header">
       <div id="sheet-color-bar"></div>
       <div id="sheet-club"></div>
@@ -1091,7 +1091,7 @@
     }).join('<hr style="border:none; border-top:1px solid #eee; margin:3px 0;">');
   }
 
-  // Flag to enable/disable the "weather" button in the mobile bottom sheet
+  // Flag to enable/disable the "Weather" button in the mobile bottom sheet for the detailed weather
   const ENABLE_DETAILED_WEATHER = true;
 
   // Set of "<ride_title>|<date>" keys whose detailed forecast has status "available"
@@ -1106,7 +1106,7 @@
         if (r.status === 'available') detailedWeatherKeys.add(r.ride_title + '|' + r.date);
       }
     } catch {
-      detailedWeatherKeys = new Set(); // Missing/broken file. The "weather" button just stays hidden
+      detailedWeatherKeys = new Set(); // Missing/broken file. The "Weather" button just stays hidden
     }
   })();
 
@@ -1385,7 +1385,7 @@
 
     if (ride.women_only) addBadge("Women only", "women");
 
-    // Show the "weather" button only when this ride has a detailed forecast available
+    // Show the "Eeather" button only when this ride has a detailed forecast available
     const weatherBtn = document.getElementById("sheet-weather-btn");
     if (ENABLE_DETAILED_WEATHER && detailedWeatherKeys.has(ride.title + '|' + ride.date)) {
       weatherBtn.href = '/detailed_weather/?title=' + encodeURIComponent(ride.title) +
