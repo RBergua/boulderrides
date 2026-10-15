@@ -1,17 +1,5 @@
 [
   {
-    "name": "CYCLO-X Louisville",
-    "url": "http://www.withoutlimits.co",
-    "reg_link": "http://www.BikeReg.com/77120",
-    "location": "Louisville",
-    "latitude": 39.9750467,
-    "longitude": -105.1574198,
-    "type": [
-      "Cyclocross"
-    ],
-    "date": "2026-10-17"
-  },
-  {
     "name": "CYCLO-X Boulder",
     "url": "http://www.withoutlimits.co",
     "reg_link": "http://www.BikeReg.com/77122",
