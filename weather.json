@@ -1,98 +1,98 @@
 {
-  "2026-10-19": [
+  "2026-11-06": [
     {
-      "time": "9 AM",
-      "temperature_F": 48,
+      "time": "10 AM",
+      "temperature_F": 51,
+      "description": "Mostly Cloudy",
+      "symbol": "☁️"
+    },
+    {
+      "time": "2 PM",
+      "temperature_F": 58,
+      "description": "Mostly Cloudy",
+      "symbol": "☁️"
+    }
+  ],
+  "2026-11-07": [
+    {
+      "time": "10 AM",
+      "temperature_F": 53,
       "description": "Sunny",
       "symbol": "☀️"
     },
     {
-      "time": "4 PM",
+      "time": "2 PM",
+      "temperature_F": 63,
+      "description": "Sunny",
+      "symbol": "☀️"
+    }
+  ],
+  "2026-11-08": [
+    {
+      "time": "10 AM",
+      "temperature_F": 55,
+      "description": "Sunny",
+      "symbol": "☀️"
+    },
+    {
+      "time": "2 PM",
       "temperature_F": 67,
+      "description": "Sunny",
+      "symbol": "☀️"
+    }
+  ],
+  "2026-11-09": [
+    {
+      "time": "10 AM",
+      "temperature_F": 57,
+      "description": "Sunny",
+      "symbol": "☀️"
+    },
+    {
+      "time": "2 PM",
+      "temperature_F": 67,
+      "description": "Sunny",
+      "symbol": "☀️"
+    }
+  ],
+  "2026-11-10": [
+    {
+      "time": "10 AM",
+      "temperature_F": 56,
+      "description": "Mostly Sunny",
+      "symbol": "🌤️"
+    },
+    {
+      "time": "2 PM",
+      "temperature_F": 66,
       "description": "Mostly Sunny",
       "symbol": "🌤️"
     }
   ],
-  "2026-10-20": [
+  "2026-11-11": [
     {
-      "time": "9 AM",
+      "time": "10 AM",
       "temperature_F": 54,
       "description": "Mostly Sunny",
       "symbol": "🌤️"
     },
     {
-      "time": "4 PM",
-      "temperature_F": 71,
-      "description": "Mostly Sunny",
-      "symbol": "🌤️"
+      "time": "2 PM",
+      "temperature_F": 62,
+      "description": "Sunny",
+      "symbol": "☀️"
     }
   ],
-  "2026-10-21": [
+  "2026-11-12": [
     {
-      "time": "9 AM",
+      "time": "10 AM",
       "temperature_F": 57,
-      "description": "Mostly Sunny",
-      "symbol": "🌤️"
+      "description": "Sunny",
+      "symbol": "☀️"
     },
     {
-      "time": "4 PM",
-      "temperature_F": 74,
-      "description": "Partly Sunny",
-      "symbol": "⛅"
-    }
-  ],
-  "2026-10-22": [
-    {
-      "time": "9 AM",
-      "temperature_F": 57,
-      "description": "Mostly Cloudy",
-      "symbol": "☁️"
-    },
-    {
-      "time": "4 PM",
-      "temperature_F": 71,
-      "description": "Chance Rain Showers",
-      "symbol": "🌧️"
-    }
-  ],
-  "2026-10-23": [
-    {
-      "time": "9 AM",
-      "temperature_F": 57,
-      "description": "Mostly Sunny",
-      "symbol": "🌤️"
-    },
-    {
-      "time": "4 PM",
-      "temperature_F": 69,
-      "description": "Mostly Sunny",
-      "symbol": "🌤️"
-    }
-  ],
-  "2026-10-24": [
-    {
-      "time": "9 AM",
-      "temperature_F": 46,
-      "description": "Chance Rain Showers",
-      "symbol": "🌧️"
-    },
-    {
-      "time": "4 PM",
-      "temperature_F": 57,
-      "description": "Chance Rain Showers",
-      "symbol": "🌧️"
-    }
-  ],
-  "2026-10-25": [
-    {
-      "time": "9 AM",
-      "temperature_F": 45,
-      "description": "Mostly Sunny",
-      "symbol": "🌤️"
-    },
-    {
-      "time": "4 PM",
-      "temperature_F": 63,
+      "time": "2 PM",
+      "temperature_F": 66,
       "description": "Sunny",
       "symbol": "☀️"
     }
