@@ -1,0 +1,100 @@
+{
+  "2026-11-28": [
+    {
+      "time": "10 AM",
+      "temperature_F": 47,
+      "description": "Mostly Sunny",
+      "symbol": "🌤️"
+    },
+    {
+      "time": "2 PM",
+      "temperature_F": 43,
+      "description": "Snow Showers Likely",
+      "symbol": "❄️"
+    }
+  ],
+  "2026-11-29": [
+    {
+      "time": "10 AM",
+      "temperature_F": 34,
+      "description": "Sunny",
+      "symbol": "☀️"
+    },
+    {
+      "time": "2 PM",
+      "temperature_F": 47,
+      "description": "Mostly Sunny",
+      "symbol": "🌤️"
+    }
+  ],
+  "2026-11-30": [
+    {
+      "time": "10 AM",
+      "temperature_F": 47,
+      "description": "Mostly Sunny",
+      "symbol": "🌤️"
+    },
+    {
+      "time": "2 PM",
+      "temperature_F": 56,
+      "description": "Mostly Sunny",
+      "symbol": "🌤️"
+    }
+  ],
+  "2026-12-01": [
+    {
+      "time": "10 AM",
+      "temperature_F": 46,
+      "description": "Partly Sunny",
+      "symbol": "⛅"
+    },
+    {
+      "time": "2 PM",
+      "temperature_F": 56,
+      "description": "Mostly Sunny",
+      "symbol": "🌤️"
+    }
+  ],
+  "2026-12-02": [
+    {
+      "time": "10 AM",
+      "temperature_F": 44,
+      "description": "Mostly Sunny",
+      "symbol": "🌤️"
+    },
+    {
+      "time": "2 PM",
+      "temperature_F": 54,
+      "description": "Mostly Sunny",
+      "symbol": "🌤️"
+    }
+  ],
+  "2026-12-03": [
+    {
+      "time": "10 AM",
+      "temperature_F": 38,
+      "description": "Chance Snow Showers",
+      "symbol": "❄️"
+    },
+    {
+      "time": "2 PM",
+      "temperature_F": 48,
+      "description": "Slight Chance Snow Showers",
+      "symbol": "❄️"
+    }
+  ],
+  "2026-12-04": [
+    {
+      "time": "10 AM",
+      "temperature_F": 41,
+      "description": "Mostly Sunny",
+      "symbol": "🌤️"
+    },
+    {
+      "time": "2 PM",
+      "temperature_F": 50,
+      "description": "Slight Chance Snow Showers",
+      "symbol": "❄️"
+    }
+  ]
+}
