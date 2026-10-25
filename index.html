@@ -1722,6 +1722,7 @@
   // Click/tap selects a ride; desktop hover provides a preview when none is selected.
   function loadRoutes(date) {
     closeSheet();
+	restoreAllRoutes = null; // Stop trying to restore routes from the previous day.
     rideHitLayerIds.clear();
 
     // Debug logs to check the selected date and available rides/races (F12 or CTRL+SHIFT+I in browser to open console)
