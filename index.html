@@ -269,7 +269,7 @@
     #info-content p, #races-content p { margin: 0 0 12px; line-height: 1.7; color: #333; font-size: 0.95em; }
     #info-content hr, #races-content hr {border: none; border-top: 1px solid #eee; margin: 24px 0; }
 
-    /* Mobile bottom sheet */
+    /* Shared ride card: bottom sheet on mobile (touch), floating card on desktop (mouse) */
     #ride-sheet {
       position: fixed;
       bottom: 0; left: 0; right: 0;
@@ -283,7 +283,9 @@
     #ride-sheet.open { transform: translateY(0); pointer-events: all; }
     #sheet-handle { width: 40px; height: 4px; background: #ccc; border-radius: 2px; margin: 12px auto 0; }
     #sheet-body { padding: 16px 20px 28px; font-family: Arial, sans-serif; }
-    #sheet-header { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; padding-right: 90px; } /* right padding keeps the club name clear of #sheet-weather-btn */
+    #sheet-header { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+    #ride-sheet.has-weather #sheet-header { padding-right: 90px; } /* reserve space only when the Weather button is shown */
+    #sheet-close { display: none; position: absolute; top: 4px; right: 12px; width: 24px; height: 24px; border: none; border-radius: 50%; background: #eee; color: #333; font-size: 20px; cursor: pointer; }
     #sheet-color-bar { width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0; background: #007bff; }
     #sheet-club { font-size: 1.15em; font-weight: 700; text-transform: uppercase; color: #111; line-height: 1.3; margin: 0; }
     #sheet-title { font-size: 1.0em; font-weight: 400; color: #888; margin: 0 0 12px; }
@@ -307,7 +309,7 @@
     #sheet-source-btn:active { background: #e04400; transform: scale(0.98); }
     #sheet-source-btn.no-url { background: #ccc; cursor: default; }
 
-    /* "Weather" button: top-right of the bottom sheet, opens the detailed weather page.
+    /* "Weather" button: top-right of the ride card, opens the detailed weather page.
        Hidden by default; openSheet() shows it only when detailed weather is available. */
     #sheet-weather-btn {
       position: absolute; top: 32px; right: 20px;
@@ -326,8 +328,19 @@
       .maplibregl-ctrl-attrib.hidden { opacity: 0; pointer-events: none; }
     }
 
-    /* Hide bottom-sheet entirely on desktop */
-    @media (pointer: fine) { #ride-sheet { display: none !important; } }
+    @media (pointer: fine) {
+      #ride-sheet {
+        left: auto; right: 24px; bottom: 32px; width: max-content; max-width: calc(100% - 48px);
+        border-radius: 16px;
+        visibility: hidden; opacity: 0; transform: translateY(16px);
+        transition: transform 0.2s ease, opacity 0.2s ease, visibility 0.2s;
+      }
+      #ride-sheet.open { visibility: visible; opacity: 1; transform: translateY(0); }
+      #sheet-handle { display: none; }
+      #sheet-close { display: block; }
+      #ride-sheet.has-weather #sheet-header { padding-right: 0; }
+      #sheet-weather-btn { position: static; width: 100%; box-sizing: border-box; margin-top: 10px; padding: 14px; border-radius: 12px; font-size: 1em; text-align: center; }
+    }
 
     /* ── Loading overlay ──────────────────────────────────────────────────────
        Covers the full screen while the map style and ride data are being fetched.
@@ -396,6 +409,7 @@
 
     /* Desktop hover tooltip card */
     .ride-tooltip {
+      pointer-events: none;
       border-radius: 12px; /* rounded corners */
       padding: 16px 20px;
       box-shadow: 0 -4px 24px rgba(0,0,0,0.18);
@@ -499,11 +513,11 @@
   <button id="metric-btn" class="overlay-btn">Metric</button>
 </div>
 
-<!-- Mobile bottom sheet: slides up on route tap -->
-<div id="ride-sheet">
+<!-- Shared ride details: opens on route click or tap -->
+<div id="ride-sheet" role="region" aria-label="Selected ride" inert>
   <div id="sheet-handle"></div>
+  <button id="sheet-close" type="button" aria-label="Close ride details">&times;</button>
   <div id="sheet-body">
-    <a id="sheet-weather-btn">Weather</a>
     <div id="sheet-header">
       <div id="sheet-color-bar"></div>
       <div id="sheet-club"></div>
@@ -511,6 +525,7 @@
     <div id="sheet-title"></div>
     <div id="sheet-meta"></div>
     <a id="sheet-source-btn" target="_blank" rel="noopener noreferrer">View on...</a>
+    <a id="sheet-weather-btn">Weather</a>
   </div>
 </div>
 
@@ -618,7 +633,7 @@
       <strong>Pick a day</strong> on the calendar. Highlighted days have rides or races/events, and the first available one loads automatically.
     </p>
     <p>
-      <strong>Tap</strong> a route on mobile or <strong>hover</strong> on desktop to see its details.
+      <strong>Click or tap</strong> a route or its pin to see details and available weather. On desktop, <strong>hover</strong> for a quick preview. Close the card or select another ride to keep exploring.
     </p>
     <p>
       <strong>Solid lines</strong> are paved, <strong>dashed lines</strong> are unpaved (e.g., gravel). Each route has a pin that marks its start.
@@ -990,11 +1005,13 @@
 
   // Tracks the currently visible desktop hover popup
   let activePopup = null;
+  const rideHitLayerIds = new Set();
 
-  // Clicking the map background closes the mobile sheet or desktop popup
-  map.on('click', () => {
-    if (isTouchDevice) closeSheet();
-    else if (activePopup) { activePopup.remove(); activePopup = null; }
+  // MapLibre layer clicks also reach this listener; only dismiss on empty map.
+  map.on('click', e => {
+    const layers = [...rideHitLayerIds];
+    if (layers.length && map.queryRenderedFeatures(e.point, { layers }).length) return;
+    closeSheet();
   });
 
   // -------------------------------
@@ -1092,7 +1109,7 @@
     }).join('<hr style="border:none; border-top:1px solid #eee; margin:3px 0;">');
   }
 
-  // Flag to enable/disable the "Weather" button in the mobile bottom sheet for the detailed weather
+  // Flag to enable/disable the detailed weather action in the ride card
   const ENABLE_DETAILED_WEATHER = true;
 
   // Set of "<ride_title>|<date>" keys whose detailed forecast has status "available"
@@ -1106,6 +1123,7 @@
       for (const r of data.rides || []) {
         if (r.status === 'available') detailedWeatherKeys.add(r.ride_title + '|' + r.date);
       }
+      if (selectedRide) updateSheetWeather(selectedRide);
     } catch {
       detailedWeatherKeys = new Set(); // Missing/broken file. The "Weather" button just stays hidden
     }
@@ -1303,7 +1321,7 @@
   });
 
   // -------------------------------
-  // Mobile bottom sheet
+  // Shared ride details
   // -------------------------------
   const sheet      = document.getElementById("ride-sheet");
   const sheetBar   = document.getElementById("sheet-color-bar");
@@ -1334,7 +1352,8 @@
   });
 
   let metricUnits  = false; // default to imperial; toggled by the Metric button
-  let currentHL   = null;   // segmentLines array for the currently highlighted route (mobile)
+  let currentHL   = null;   // segmentLines array for the selected route
+  let selectedRide = null;
   // Assigned inside loadRoutes; called by closeSheet to undo highlighting on dismiss
   let restoreAllRoutes = null;
 
@@ -1349,7 +1368,12 @@
     }
   });
 
-  // Swipe down to close
+  document.getElementById('sheet-close').addEventListener('click', closeSheet);
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && sheet.classList.contains('open')) closeSheet();
+  });
+
+  // Swipe down anywhere on the card to close.
   let touchStartY = 0;
   sheet.addEventListener("touchstart", (e) => {
     touchStartY = e.touches[0].clientY;
@@ -1359,8 +1383,10 @@
     if (swipeDistance > 60) closeSheet(); // 60px downward swipe closes the sheet. Tune the 60 to make it more or less sensitive
   }, { passive: true });
 
-   // Populates and slides up the mobile bottom sheet for a given ride.
-    function openSheet(ride) {
+  // Populates the shared ride card.
+  function openSheet(ride) {
+    selectedRide = ride;
+    if (activePopup) { activePopup.remove(); activePopup = null; }
     sheetBar.style.background  = ride.color || "#007bff";
     sheetClub.textContent      = ride.club_name;
     sheetTitle.textContent     = ride.title;
@@ -1386,9 +1412,25 @@
 
     if (ride.women_only) addBadge("Women only", "women");
 
-    // Show the "Eeather" button only when this ride has a detailed forecast available
+    updateSheetWeather(ride);
+
+    // Wire up the source button
+    sheetBtn.textContent = `View on ${ride.source}`;
+    if (ride.url) { sheetBtn.href = ride.url; sheetBtn.classList.remove("no-url"); }
+    else          { sheetBtn.removeAttribute("href"); sheetBtn.classList.add("no-url"); }
+
+    sheet.inert = false;
+    sheet.classList.add("open");
+    closeMenuPanel();  // don't let the ride sheet and the hamburger panel overlap
+    menuToggleBtn.classList.add("sheet-open");
+    document.querySelector('.maplibregl-ctrl-attrib')?.classList.add('hidden');
+  }
+
+  function updateSheetWeather(ride) {
     const weatherBtn = document.getElementById("sheet-weather-btn");
-    if (ENABLE_DETAILED_WEATHER && detailedWeatherKeys.has(ride.title + '|' + ride.date)) {
+    const hasWeather = ENABLE_DETAILED_WEATHER && detailedWeatherKeys.has(ride.title + '|' + ride.date);
+    sheet.classList.toggle('has-weather', hasWeather);
+    if (hasWeather) {
       weatherBtn.href = '/detailed_weather/?title=' + encodeURIComponent(ride.title) +
                         '&date=' + encodeURIComponent(ride.date);
       weatherBtn.style.display = 'block';
@@ -1396,29 +1438,19 @@
       weatherBtn.removeAttribute("href");
       weatherBtn.style.display = 'none';
     }
-
-    // Wire up the source button
-    sheetBtn.textContent = `View on ${ride.source}`;
-    if (ride.url) { sheetBtn.href = ride.url; sheetBtn.classList.remove("no-url"); }
-    else          { sheetBtn.removeAttribute("href"); sheetBtn.classList.add("no-url"); }
-
-    sheet.classList.add("open");
-    closeMenuPanel();  // don't let the ride sheet and the hamburger panel overlap
-    requestAnimationFrame(() => {
-      menuToggleBtn.classList.add("sheet-open");
-      document.querySelector('.maplibregl-ctrl-attrib')?.classList.add('hidden');
-    });
   }
 
-  // Slides down and fully resets the mobile bottom sheet.
+  // Dismiss the card and clear both selection and hover preview.
   function closeSheet() {
+    if (sheet.contains(document.activeElement)) map.getCanvas().focus({ preventScroll: true });
+    sheet.inert = true;
     sheet.classList.remove("open");
+    selectedRide = null;
     menuToggleBtn.classList.remove("sheet-open");
-    document.querySelector('.maplibregl-ctrl-attrib').classList.remove('hidden');
-    if (currentHL) {
-      restoreAllRoutes(); // restore all routes to default style when sheet is dismissed
-      currentHL = null;
-    }
+    document.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('hidden');
+    if (activePopup) { activePopup.remove(); activePopup = null; }
+    if (restoreAllRoutes) restoreAllRoutes();
+    currentHL = null;
   }
 
   // -------------------------------
@@ -1683,10 +1715,10 @@
   // Route and race rendering
   // -------------------------------
   // Draws routes and race markers for the selected calendar date.
-  //  Desktop: hover highlights the route + shows a tooltip, click opens Strava.
-  //  Mobile:  tap highlights the route + slides up the bottom sheet.
+  // Click/tap selects a ride; desktop hover provides a preview when none is selected.
   function loadRoutes(date) {
-    if (isTouchDevice) closeSheet(); // If we're on mobile: close sheet (if it was open) when moving between days
+    closeSheet();
+    rideHitLayerIds.clear();
 
     // Debug logs to check the selected date and available rides/races (F12 or CTRL+SHIFT+I in browser to open console)
     //console.log("Selected date:", date);
@@ -1987,9 +2019,6 @@
       // arrow layer renders on top instead of underneath the route.
       let arrowLayer;
 
-      // Collects layer IDs for white base lines under unpaved dashes (used by highlight/restore)
-      const whitelines = [];
-
       // buildVisibleLines
       // One source per ride and 3 fixed layers per ride using filter expressions:
       //   1. paved solid line
@@ -2083,43 +2112,31 @@
           paint: { 'line-color': 'transparent', 'line-width': hitWidth, 'line-opacity': 0 }
         });
         map._routeLayerIds.push(hitId);
+        rideHitLayerIds.add(hitId);
         return hitId;
       }
 
-      if (isTouchDevice) {
-        // MOBILE
-        // Tap route → bottom sheet slides up with details
+      const { segmentLines, whitelines } = buildVisibleLines(color, isTouchDevice ? 5 : 4, isTouchDevice ? 0.85 : 0.8);
+      const hitId        = addHitLayer(isTouchDevice ? 25 : 20);
+      arrowLayer         = addDirectionArrowLayer(allLatLngs, color); // added last so it renders on top
+      const markerEl     = createPinMarker([start[1], start[0]], color).addTo(map);
+      map._routeMarkers.push(markerEl);
+      allVisibleLayers.push({ segmentLines, whitelines, arrowLayer, marker: markerEl, color, isMobile: isTouchDevice });
 
-        const { segmentLines, whitelines } = buildVisibleLines(color, 5, 0.85);
-        const hitId        = addHitLayer(25);
-        arrowLayer         = addDirectionArrowLayer(allLatLngs, color); // added last so it renders on top
-        const markerEl     = createPinMarker([start[1], start[0]], color).addTo(map);
-        map._routeMarkers.push(markerEl);
-        allVisibleLayers.push({ segmentLines, whitelines, arrowLayer, marker: markerEl, color, isMobile: true });
+      const selectRide = () => {
+        restoreAllRoutes();
+        highlightRoute(segmentLines);
+        currentHL = segmentLines;
+        openSheet(ride);
+      };
 
-        // Tap handler: highlight this route, dim all others, open the bottom sheet
-        const tapHandler = e => {
-          e.originalEvent?.stopPropagation();
-          restoreAllRoutes();
-          highlightRoute(segmentLines);
-          currentHL = segmentLines;
-          openSheet(ride);
-        };
+      map.on('click', hitId, e => {
+        const hits = map.queryRenderedFeatures(e.point, { layers: [...rideHitLayerIds] });
+        if (hits[0]?.layer.id === hitId) selectRide();
+      });
+      markerEl.getElement().addEventListener('click', e => { e.stopPropagation(); selectRide(); });
 
-        map.on('click', hitId, e => { e.originalEvent.stopPropagation(); tapHandler(e); });
-        markerEl.getElement().addEventListener('click', e => { e.stopPropagation(); tapHandler({ originalEvent: e }); });
-
-      } else {
-        // DESKTOP
-        // Hover highlights the route, dims others, click opens Strava.
-
-        const { segmentLines, whitelines } = buildVisibleLines(color, 4, 0.8);
-        const hitId        = addHitLayer(20);
-        arrowLayer         = addDirectionArrowLayer(allLatLngs, color); // added last so it renders on top
-        const markerEl     = createPinMarker([start[1], start[0]], color).addTo(map);
-        map._routeMarkers.push(markerEl);
-        allVisibleLayers.push({ segmentLines, whitelines, arrowLayer, marker: markerEl, color, isMobile: false });
-
+      if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
         // HTML injected into the hover tooltip popup
         const tooltipContent = buildTooltipHTML(ride, rideTime);
 
@@ -2135,42 +2152,35 @@
         map.on('mouseenter', hitId, e => {
           hoveredHitId = hitId;
           map.getCanvas().style.cursor = 'pointer';
+          if (currentHL) return;
           highlightRoute(segmentLines);
           showPopup(e.lngLat);
         });
-        map.on('mousemove', hitId, e => { activePopup?.setLngLat(e.lngLat); });
+        map.on('mousemove', hitId, e => {
+          if (!currentHL && hoveredHitId === hitId) activePopup?.setLngLat(e.lngLat);
+        });
         map.on('mouseleave', hitId, () => {
           // Guard: only restore if the mouse hasn't already entered a different route
           // (mouseenter on the new route fires before mouseleave on the old one)
           if (hoveredHitId === hitId) {
             hoveredHitId = null;
             map.getCanvas().style.cursor = '';
-            restoreAllRoutes();
+            if (!currentHL) restoreAllRoutes();
             if (activePopup) { activePopup.remove(); activePopup = null; }
           }
         });
-        map.on('click', hitId, e => {
-          e.originalEvent?.stopPropagation();
-          if (hoveredHitId !== hitId) return; // Select only the route hovered (not one underneath) 
-          if (ride.url) window.open(ride.url, '_blank', 'noopener,noreferrer');
-        });
-
         // Marker hover/click mirrors the hit-layer behaviour
         markerEl.getElement().addEventListener('mouseenter', () => {
-          if (!hoveredHitId) {
+          if (!currentHL && !hoveredHitId) {
             highlightRoute(segmentLines);
             showPopup(markerEl.getLngLat());
           }
         });
         markerEl.getElement().addEventListener('mouseleave', () => {
-          if (!hoveredHitId) {
+          if (!currentHL && !hoveredHitId) {
             restoreAllRoutes();
             if (activePopup) { activePopup.remove(); activePopup = null; }
           }
-        });
-        markerEl.getElement().addEventListener('click', e => {
-          e.stopPropagation();
-          if (ride.url) window.open(ride.url, '_blank', 'noopener,noreferrer');
         });
       }
     });
