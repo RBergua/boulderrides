@@ -101,6 +101,21 @@
   <meta property="og:url"         content="https://boulderrides.cc">
   <meta property="og:type"        content="website">
 
+  <!-- Start downloading the ride/race/weather data now, in parallel with MapLibre. Without this, the data
+       only starts downloading after the MapLibre script has loaded. This helps with connections that are not super fast -->
+  <script>
+    // These files live on the 'data' branch (not 'main').
+    const DATA_BASE_URL = 'https://raw.githubusercontent.com/RBergua/boulderrides/data/'; // GitHub URL for 'data' branch
+    for (const file of ['club_rides.json', 'races.json', 'weather.json']) {
+      const link = document.createElement('link');
+      link.rel = 'preload';
+      link.as = 'fetch';
+      link.crossOrigin = 'anonymous';
+      link.href = DATA_BASE_URL + file;
+      document.head.appendChild(link);
+    }
+  </script>
+
   <!-- MapLibre GL JS CSS -->
     <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css" /> <!-- Using a pinned version, so updates down the road do not break the site -->
 
@@ -902,7 +917,7 @@
   // Loading overlay helpers (progress bar)
   // setProgress(pct, label) advances the blue fill bar to `pct` % and optionally
   // updates the status label.
-  // hideLoadingOverlay() snaps the bar to 100 %, waits 1000 ms for the fill
+  // hideLoadingOverlay() snaps the bar to 100 %, waits 500 ms for the fill
   // transition to finish (e.g., map zooming), then fades the overlay out via the .hidden class.
   const loadingOverlay = document.getElementById('loading-overlay');
   const loadingBarFill = document.getElementById('loading-bar-fill');
@@ -917,7 +932,7 @@
 
   function hideLoadingOverlay() {
     setProgress(100);                           // snap bar to full
-    setTimeout(() => loadingOverlay.classList.add('hidden'), 1000); // wait for fill transition, then fade out
+    setTimeout(() => loadingOverlay.classList.add('hidden'), 500); // wait for fill transition, then fade out
   }
 
   // Shows again the same full-screen overlay used on first load.
@@ -1021,9 +1036,7 @@
   // -------------------------------
   // Load routes from club_rides.json, races from races.json, and weather from weather.json
   // -------------------------------
-  // These 3 files live on the 'data' branch (not 'main'). Kept separate from 'main'
-  // so the site's code history stays clean. See DATA_BASE_URL below.
-  const DATA_BASE_URL = 'https://raw.githubusercontent.com/RBergua/boulderrides/data/'; // GitHub URL for 'data' branch
+  // These 3 files live on the 'data' branch (not 'main'). See DATA_BASE_URL in <head>.
   // Rides grouped by date: { "YYYY-MM-DD": [ride, ride, ...], ... }
   let ridesByDate = {};
 
@@ -1034,7 +1047,7 @@
   // Loads initial rides data concurrently and plots them once map is ready
   //console.time('[PERF] app start → club_rides.json ready'); // Debugging performance
   const ridesReady = (async () => {
-    const res = await fetch(DATA_BASE_URL + 'club_rides.json?v=' + Date.now(), { cache: 'no-store' }); // cache: 'no-store' + timestamp ensures we bypass all caching (browser, PWA, server)
+    const res = await fetch(DATA_BASE_URL + 'club_rides.json', { cache: 'no-cache' }); // Same URL as the <link rel="preload"> in <head>, so the browser reuses that download. 'no-cache' = check with the server before reusing a saved copy. Refresh interval is 5 min.
     const rides = await res.json();
     lastDataString = JSON.stringify(rides); // Store a snapshot of the data for future change detection
     //console.timeEnd('[PERF] app start → club_rides.json ready'); // Debugging performance
@@ -1056,7 +1069,7 @@
   let allRaces = [];
 
   const racesReady = (async () => {
-    const res = await fetch(DATA_BASE_URL + 'races.json?v=' + Date.now(), { cache: 'no-store' }); // cache: 'no-store' + timestamp ensures we bypass all caching (browser, PWA, server)
+    const res = await fetch(DATA_BASE_URL + 'races.json', { cache: 'no-cache' }); // See club_rides.json above
     allRaces = await res.json();
     setProgress(75, 'Preparing map…');          // Progress bar. Milestone 3: race data ready
 
@@ -1081,7 +1094,7 @@
   const weatherReady = (async () => {
     if (!ENABLE_WEATHER) return;
     try {
-      const res = await fetch(DATA_BASE_URL + 'weather.json?v=' + Date.now(), { cache: 'no-store' }); // cache: 'no-store' + timestamp ensures we bypass all caching (browser, PWA, server)
+      const res = await fetch(DATA_BASE_URL + 'weather.json', { cache: 'no-cache' }); // See club_rides.json above
       weatherByDate = await res.json();
     } catch {
       weatherByDate = {}; // Missing/broken file. updateWeather() will just hide the widget
@@ -1122,7 +1135,7 @@
   (async () => {
     if (!ENABLE_DETAILED_WEATHER) return;
     try {
-      const res = await fetch(DATA_BASE_URL + 'detailed_weather.json?v=' + Date.now(), { cache: 'no-store' });
+      const res = await fetch(DATA_BASE_URL + 'detailed_weather.json', { cache: 'no-cache' }); // See club_rides.json above
       const data = await res.json();
       for (const r of data.rides || []) {
         if (r.status === 'available') detailedWeatherKeys.add(r.ride_title + '|' + r.date);
