@@ -215,8 +215,11 @@
   // Arrow length is scaled by wind speed: slowest sample is 20% shorter than
   // the base length, fastest is 20% longer. Arrows' tips sit on the sample's
   // lat/lon, pointing the way the wind is blowing.
-  function drawWindMap(containerId, route, samples) {
-    pendingWindDraw = () => renderWindMap(route, samples);
+  // `segments` is the already-built paved/unpaved breakdown of `route`,
+  // handed off from the main map page (see buildSegments() in index.html) so
+  // this page doesn't need its own copy of that logic.
+  function drawWindMap(containerId, route, segments, samples) {
+    pendingWindDraw = () => renderWindMap(route, segments, samples);
 
     if (!windMap) {
       windMap = new maplibregl.Map({
@@ -241,16 +244,43 @@
     if (windMapReady) pendingWindDraw();
   }
 
-  function renderWindMap(route, samples) {
+  function renderWindMap(route, segments, samples) {
     const coords = route.map(p => [p[1], p[0]]); // MapLibre: [lng, lat]
+    const toML = latlngs => latlngs.map(([lat, lng]) => [lng, lat]);
 
-    if (windMap.getLayer('wind-route')) windMap.removeLayer('wind-route');
+    // Remove any previously-drawn route layers/source (re-rendered e.g. after a unit toggle).
+    ['wind-route-paved', 'wind-route-unpaved-base', 'wind-route-unpaved-dashed'].forEach(id => {
+      if (windMap.getLayer(id)) windMap.removeLayer(id);
+    });
     if (windMap.getSource('wind-route')) windMap.removeSource('wind-route');
-    windMap.addSource('wind-route', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: coords } } });
+
+    const weight = 3;
+    const features = segments.map(seg => ({
+      type: 'Feature',
+      properties: { surface: seg.surface },
+      geometry: { type: 'LineString', coordinates: toML(seg.latlngs) },
+    }));
+    windMap.addSource('wind-route', { type: 'geojson', data: { type: 'FeatureCollection', features } });
+
+    // Paved: solid colored line.
     windMap.addLayer({
-      id: 'wind-route', type: 'line', source: 'wind-route',
+      id: 'wind-route-paved', type: 'line', source: 'wind-route',
+      filter: ['==', ['get', 'surface'], 'paved'],
       layout: { 'line-cap': 'round', 'line-join': 'round' },
-      paint: { 'line-color': '#007bff', 'line-width': 3 },
+      paint: { 'line-color': '#007bff', 'line-width': weight },
+    });
+    // Unpaved: white base line (keeps the dashes crisp over the basemap), then a dashed line on top.
+    windMap.addLayer({
+      id: 'wind-route-unpaved-base', type: 'line', source: 'wind-route',
+      filter: ['==', ['get', 'surface'], 'unpaved'],
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': 'white', 'line-width': weight },
+    });
+    windMap.addLayer({
+      id: 'wind-route-unpaved-dashed', type: 'line', source: 'wind-route',
+      filter: ['==', ['get', 'surface'], 'unpaved'],
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': '#007bff', 'line-width': weight, 'line-dasharray': [2 / weight, 6 / weight] },
     });
 
     const speeds = samples.map(s => s.wind_speed_mph);
@@ -339,8 +369,50 @@
         const { ctx, scales } = chart;
         ctx.save();
         ctx.font = '16px Arial';
-        ctx.textAlign = 'center';
-        symbols.forEach(s => ctx.fillText(s.symbol, scales.x.getPixelForValue(s.x), scales.y.getPixelForValue(s.y) - 10));
+        // Dealing with the emojis on different platforms (Safari, Chrome, etc.)
+        // and their varying widths. With textAlign = 'center' we tend to show emojis
+        // at the right side on Safari.
+        ctx.textAlign = 'left';
+        symbols.forEach(s => {
+          const cx = scales.x.getPixelForValue(s.x);
+          const cy = scales.y.getPixelForValue(s.y) - 10;
+          const metrics = ctx.measureText(s.symbol);
+          // With textAlign 'left', the ink spans [x - boxLeft, x + boxRight],
+          // so its center sits at x + (boxRight - boxLeft) / 2. Solve for the
+          // x that puts that center exactly at cx. Falls back to half the
+          // advance width (the old behavior) if a browser lacks these
+          // properties (all current ones should support them).
+          const boxLeft = metrics.actualBoundingBoxLeft ?? metrics.width / 2;
+          const boxRight = metrics.actualBoundingBoxRight ?? metrics.width / 2;
+          const x = cx - (boxRight - boxLeft) / 2;
+          ctx.fillText(s.symbol, x, cy);
+        });
+        ctx.restore();
+      },
+    };
+
+    // Custom plugin: draws the elevation profile as a filled area behind the
+    // main lines. This is a plugin rather than a dataset so it never
+    // participates in hover/tooltip interaction.
+    const elevationPlugin = {
+      id: 'elevationArea',
+      beforeDatasetsDraw(chart) {
+        const { ctx, scales } = chart;
+        ctx.save();
+        ctx.beginPath();
+        elevation.forEach((p, i) => {
+          const x = scales.x.getPixelForValue(p.x);
+          const y = scales.elev.getPixelForValue(p.y);
+          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        });
+        ctx.lineTo(scales.x.getPixelForValue(elevation[elevation.length - 1].x), scales.elev.getPixelForValue(scales.elev.min));
+        ctx.lineTo(scales.x.getPixelForValue(elevation[0].x), scales.elev.getPixelForValue(scales.elev.min));
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(150,150,150,0.25)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(150,150,150,0.5)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
         ctx.restore();
       },
     };
@@ -348,33 +420,23 @@
     new Chart(canvas, {
       type: 'line',
       data: {
-        datasets: [
-          ...(elevation ? [{
-            label: 'Elevation',
-            data: elevation,
-            borderColor: 'rgba(150,150,150,0.5)',
-            backgroundColor: 'rgba(150,150,150,0.25)',
-            borderWidth: 1,
-            pointRadius: 0,
-            fill: true,
-            yAxisID: 'elev',
-            order: 99, // drawn first, so it sits behind the main lines
-          }] : []),
-          ...lines.map(line => ({
-            label: line.label,
-            data: line.data,
-            borderColor: '#007bff',
-            borderDash: line.dashed ? [6, 4] : [],
-            borderWidth: 2,
-            pointRadius: 0, // no markers
-            tension: 0.3,
-          })),
-        ],
+        datasets: lines.map(line => ({
+          label: line.label,
+          data: line.data,
+          borderColor: '#007bff',
+          borderDash: line.dashed ? [6, 4] : [],
+          borderWidth: 2,
+          pointRadius: 0, // no markers
+          tension: 0.3,
+        })),
       },
       // Extra top padding makes room for the symbol row above the highest line.
-      plugins: symbols ? [symbolPlugin] : [],
+      plugins: [...(symbols ? [symbolPlugin] : []), ...(elevation ? [elevationPlugin] : [])],
       options: {
         layout: { padding: { top: symbols ? 20 : 0 } },
+        // Without this, the default intersect:true mode only fires the
+        // tooltip when the mouse sits (or mouse tabs) lands exactly on a sample point.
+        interaction: { mode: 'index', intersect: false },
         scales: {
           // Fixed at 5 ticks so every chart's left axis (and the elevation
           // axis, which mirrors these positions) lines up the same way.
@@ -404,7 +466,19 @@
             grid: { display: true },
           },
         },
-        plugins: { legend: { display: false } },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              // Default title would show the raw x value (minutes since
+              // midnight, e.g. "600"); format it as a time instead, reusing
+              // the same helper as the x-axis tick labels.
+              title: items => formatMinutes(Math.round(items[0].parsed.x)),
+              // Round every tooltip value (e.g., temperature, wind speed) to a whole number.
+              label: item => `${item.dataset.label}: ${Math.round(item.parsed.y)}`,
+            },
+          },
+        },
       },
     });
   }
@@ -429,7 +503,7 @@
 
   // Builds the three charts from the already-fetched ride data, in whichever unit system is currently selected.
   function render() {
-    const { ride, data, sampleMinutes, xMin, xMax, elevationRaw, elevGainFt, route } = rideData;
+    const { ride, data, sampleMinutes, xMin, xMax, elevationRaw, elevGainFt, route, segments } = rideData;
 
     const [datePart, timePart] = ride.date.split(' ');
     const dateDisplay = new Date(datePart + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
@@ -446,7 +520,7 @@
     const convWind = v => isMetric ? mphToKmh(v) : v;
     const averageSpeed = isMetric
       ? `${mphToKmh(ride.average_speed_mph).toFixed(1)} km/h`
-      : `${ride.average_speed_mph} mph`;
+      : `${ride.average_speed_mph.toFixed(1)} mph`;
     document.getElementById('weather-note').textContent =
       `Data provided by the National Weather Service. Average speed: ${averageSpeed} (including stops).`;
 
@@ -485,7 +559,7 @@
     // Wind-direction map, only if a matching route was found.
     const windmapBlock = document.getElementById('windmap-block');
     windmapBlock.hidden = !route;
-    if (route) drawWindMap('chart-windmap', route, ride.samples);
+    if (route) drawWindMap('chart-windmap', route, segments, ride.samples);
   }
 
   (async function init() {
@@ -500,6 +574,17 @@
         return;
       }
 
+      // This page only supports being reached by clicking a route on the
+      // main map: that's the only place the route data it needs (below) gets
+      // handed off via sessionStorage. Without it there's nothing to show,
+      // so send the user back rather than re-fetching/recomputing everything
+      // from scratch here.
+      const handoff = JSON.parse(sessionStorage.getItem('detailedWeatherRoute') || 'null');
+      if (!handoff || handoff.title !== rideTitle || handoff.date !== rideDate || !(handoff.route?.length > 1)) {
+        goHome();
+        return;
+      }
+
       document.getElementById('ride-title').textContent = ride.ride_title;
 
       // Shared x-axis range across all three charts, rounded out to the
@@ -508,22 +593,12 @@
       const xMin = Math.floor(sampleMinutes[0] / 30) * 30;
       const xMax = Math.ceil(sampleMinutes[sampleMinutes.length - 1] / 30) * 30;
 
-      let elevationRaw = null;
-      let elevGainFt = null;
-      let route = null;
-      try {
-        const clubRes = await fetch(DATA_BASE_URL + 'club_rides.json?v=' + Date.now(), { cache: 'no-store' });
-        const clubRides = await clubRes.json();
-        const clubRide = clubRides.find(r => r.title === rideTitle && r.date === rideDate);
-        if (clubRide && clubRide.route && clubRide.route.length > 1) {
-          elevationRaw = buildElevationSeries(clubRide.route, ride.samples, sampleMinutes);
-          route = clubRide.route;
-        }
-        if (clubRide) elevGainFt = clubRide.elev_gain_ft;
-      } catch {
-      }
+      const route = handoff.route;
+      const segments = handoff.segments;
+      const elevGainFt = handoff.elev_gain_ft;
+      const elevationRaw = buildElevationSeries(route, ride.samples, sampleMinutes);
 
-      rideData = { ride, data, sampleMinutes, xMin, xMax, elevationRaw, elevGainFt, route };
+      rideData = { ride, data, sampleMinutes, xMin, xMax, elevationRaw, elevGainFt, route, segments };
 
       // Charts must be unhidden before creation.
       statusEl.hidden = true;

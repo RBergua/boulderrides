@@ -1451,6 +1451,26 @@
       weatherBtn.href = '/detailed_weather/?title=' + encodeURIComponent(ride.title) +
                         '&date=' + encodeURIComponent(ride.date);
       weatherBtn.style.display = 'block';
+
+      // Hand off this ride's already-fetched route (plus the paved/unpaved
+      // segments already computed for our own map rendering)
+      // to the detailed weather page via **sessionStorage**.
+      // That page requires this handoff to render the routes and the elevation
+      // (see detailed_weather/index.html) and avoids re-fetching
+      // club_rides.json and recomputing everything itself. Keyed by
+      // title+date so the receiving page can confirm it matches before
+      // trusting it.
+      try {
+        sessionStorage.setItem('detailedWeatherRoute', JSON.stringify({
+          title: ride.title,
+          date: ride.date,
+          route: ride.route,
+          segments: buildSegments(ride.route),  // pre-computed segments for surface rendering
+          elev_gain_ft: ride.elev_gain_ft,
+        }));
+      } catch {
+        // Ignore quota/availability errors. Detailed_weather redirects home when this is missing/stale.
+      }
     } else {
       weatherBtn.removeAttribute("href");
       weatherBtn.style.display = 'none';
