@@ -279,6 +279,7 @@
     }
 
     /* Info page typography */
+    #bmc-btn { display: block; } /* removes the inline-image gap under the button so the visits box can match its height */
     #info-content h1, #races-content h1 { font-size: 1.6em; color: #007bff; margin: 0 0 8px; }
     #info-content h2, #races-content h2 { font-size: 1.15em; color: #222; margin: 28px 0 8px; }
     #info-content p, #races-content p { margin: 0 0 12px; line-height: 1.7; color: #333; font-size: 0.95em; }
@@ -555,13 +556,20 @@
       Every group ride you're looking for, all in one place! This site pulls upcoming rides from the most active cycling clubs in Boulder County and displays them on an interactive map.
     </p>
     <p style="font-size: 0.9em; color: #888;">
-      This project is free and runs 24/7 on a personal server. If it's gotten you out on a ride, you can support it:
-      <br>
-      <!-- "Buy me a coffee" smart button (id="bmc-btn"): updating counter when opening "More" page -->
-      <a href="https://www.buymeacoffee.com/rbergua">
-        <img id="bmc-btn" src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=☕&slug=rbergua&button_colour=FFDD00&font_colour=000000&font_family=Lato&outline_colour=000000&coffee_colour=ffffff" />
-      </a>
-      <br>
+      Established March 2026. This project is free and runs 24/7 on a personal server. If it's gotten you out on a ride, you can support it:
+      <span style="display:flex; align-items:stretch; flex-wrap:wrap; gap:12px 0; margin:6px 0;"> <!-- The spacer below is at least 5px and grows up to 50px when there is room. If the box can't fit with 5px, it drops below the button. -->
+        <!-- "Buy me a coffee" smart button (id="bmc-btn"): updating counter when opening "More" page -->
+        <a href="https://www.buymeacoffee.com/rbergua">
+          <img id="bmc-btn" src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=☕&slug=rbergua&button_colour=FFDD00&font_colour=000000&font_family=Lato&outline_colour=000000&coffee_colour=ffffff" />
+        </a>
+        <span aria-hidden="true" style="flex:1 1 5px; max-width:50px;"></span>
+        <!-- Total visits box (GoatCounter): hidden until the count loads -->
+        <span id="visit-counter" style="display:none; flex-direction:column; align-items:center; justify-content:center; box-sizing:border-box; min-width:120px; padding:0 14px; border:1px solid #888; border-radius:12px; color:#888; text-align:center; line-height:1.2;">
+          <span style="font-size:0.75em;">Total visits</span>
+          <strong id="visit-count" style="font-size:1.3em;"></strong>
+          <span style="font-size:0.6em;">stats by GoatCounter</span>
+        </span>
+      </span>
       Every bit helps keep it alive!
     </p>
 
@@ -830,6 +838,20 @@
         newImg.id = 'bmc-btn';                 // Transfer the id so future opens can find it again
       };
     }
+
+    loadVisitCount();
+  }
+
+  // Total visits from GoatCounter (Settings -> Settings -> Sites -> Allow adding visitor counts on your website).
+  // The line stays hidden if the request fails.
+  async function loadVisitCount() { // Load in parallel with other page elements, so the visit count appears asynchronously
+    try {
+      const res = await fetch('https://rbergua.goatcounter.com/counter/TOTAL.json');
+      if (!res.ok) return;
+      const { count } = await res.json();
+      document.getElementById('visit-count').textContent = count;
+      document.getElementById('visit-counter').style.display = 'flex';
+    } catch {}
   }
 
   // -------------------------------
