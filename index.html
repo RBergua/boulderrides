@@ -279,7 +279,7 @@
     }
 
     /* Info page typography */
-    #bmc-btn { display: block; } /* removes the inline-image gap under the button so the visits box can match its height */
+    #bmc-btn { display: block; zoom: 0.95; } /* block removes the inline-image gap so the visits box can match its height; zoom shrinks width and height together (95% of natural size) */
     #info-content h1, #races-content h1 { font-size: 1.6em; color: #007bff; margin: 0 0 8px; }
     #info-content h2, #races-content h2 { font-size: 1.15em; color: #222; margin: 28px 0 8px; }
     #info-content p, #races-content p { margin: 0 0 12px; line-height: 1.7; color: #333; font-size: 0.95em; }
@@ -557,14 +557,14 @@
     </p>
     <p style="font-size: 0.9em; color: #888;">
       Established March 2026. This project is free and runs 24/7 on a personal server. If it's gotten you out on a ride, you can support it:
-      <span style="display:flex; align-items:stretch; flex-wrap:wrap; gap:12px 0; margin:6px 0;"> <!-- The spacer below is at least 5px and grows up to 50px when there is room. If the box can't fit with 5px, it drops below the button. -->
+      <span style="display:flex; align-items:stretch; flex-wrap:wrap; gap:12px 0; margin:6px 0;"> <!-- The spacer below is at least 3px and grows up to 50px when there is room. If the box can't fit with 3px, it drops below the button. -->
         <!-- "Buy me a coffee" smart button (id="bmc-btn"): updating counter when opening "More" page -->
         <a href="https://www.buymeacoffee.com/rbergua">
           <img id="bmc-btn" src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=☕&slug=rbergua&button_colour=FFDD00&font_colour=000000&font_family=Lato&outline_colour=000000&coffee_colour=ffffff" />
         </a>
-        <span aria-hidden="true" style="flex:1 1 5px; max-width:50px;"></span>
+        <span aria-hidden="true" style="flex:1 1 2px; max-width:50px;"></span> <!-- 2px is the minimum width defined between Buy me a coffee button and the visits box -->
         <!-- Total visits box (GoatCounter): hidden until the count loads -->
-        <span id="visit-counter" style="display:none; flex-direction:column; align-items:center; justify-content:center; box-sizing:border-box; min-width:120px; padding:0 14px; border:1px solid #888; border-radius:12px; color:#888; text-align:center; line-height:1.2;">
+        <span id="visit-counter" style="display:none; flex-direction:column; align-items:center; justify-content:center; box-sizing:border-box; min-width:100px; padding:0 8px; border:1px solid #888; border-radius:12px; color:#888; text-align:center; line-height:1.1;">
           <span style="font-size:0.75em;">Total visits</span>
           <strong id="visit-count" style="font-size:1.3em;"></strong>
           <span style="font-size:0.6em;">stats by GoatCounter</span>
@@ -842,16 +842,33 @@
     loadVisitCount();
   }
 
-  // Total visits from GoatCounter (Settings -> Settings -> Sites -> Allow adding visitor counts on your website).
-  // The line stays hidden if the request fails.
+  // Total visits. Primary: Cloudflare Worker (dash.cloudflare.com, Workers & Pages) that calls the
+  // GoatCounter API with a secret token, so the token is never exposed here.
+  // Fallback: GoatCounter's public counter (Settings -> Settings -> Sites -> Allow adding visitor counts on your website),
+  // which caches responses for up to 4 hours, so it can lag behind the dashboard.
+  // The box with the visits count stays hidden if both fail.
+  const VISITS_WORKER_URL = 'https://boulderrides-visits.bergua-roger.workers.dev/';
+
   async function loadVisitCount() { // Load in parallel with other page elements, so the visit count appears asynchronously
+    let count = null;
     try {
-      const res = await fetch('https://rbergua.goatcounter.com/counter/TOTAL.json');
-      if (!res.ok) return;
-      const { count } = await res.json();
-      document.getElementById('visit-count').textContent = count;
-      document.getElementById('visit-counter').style.display = 'flex';
+      const res = await fetch(VISITS_WORKER_URL);
+      if (res.ok) {
+        const { total } = await res.json();
+        if (Number.isFinite(total)) count = total.toLocaleString('en-US').replace(/,/g, '\u00A0'); // Space (non-breaking) as thousands separator, same as the GoatCounter counter
+      }
     } catch {}
+
+    if (count === null) { // Fallback to GoatCounter's public counter if the Worker failed
+      try {
+        const res = await fetch('https://rbergua.goatcounter.com/counter/TOTAL.json');
+        if (res.ok) count = (await res.json()).count;
+      } catch {}
+    }
+
+    if (count === null) return;
+    document.getElementById('visit-count').textContent = count;
+    document.getElementById('visit-counter').style.display = 'flex';
   }
 
   // -------------------------------
