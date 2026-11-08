@@ -279,7 +279,7 @@
     }
 
     /* Info page typography */
-    #bmc-btn { display: block; zoom: 0.95; } /* block removes the inline-image gap so the visits box can match its height; zoom shrinks width and height together (95% of natural size) */
+    #bmc-btn { display: block; zoom: 0.95; width: 235px; height: 50px; } /* block removes the inline-image gap so the visits box can match its height; zoom shrinks width and height together (95% of natural size). width/height are the image's natural size (235x50), reserving its space before it downloads so nothing shifts */
     #info-content h1, #races-content h1 { font-size: 1.6em; color: #007bff; margin: 0 0 8px; }
     #info-content h2, #races-content h2 { font-size: 1.15em; color: #222; margin: 28px 0 8px; }
     #info-content p, #races-content p { margin: 0 0 12px; line-height: 1.7; color: #333; font-size: 0.95em; }
@@ -560,13 +560,13 @@
       <span style="display:flex; align-items:stretch; flex-wrap:wrap; gap:12px 0; margin:6px 0;"> <!-- The spacer below is at least 3px and grows up to 50px when there is room. If the box can't fit with 3px, it drops below the button. -->
         <!-- "Buy me a coffee" smart button (id="bmc-btn"): updating counter when opening "More" page -->
         <a href="https://www.buymeacoffee.com/rbergua">
-          <img id="bmc-btn" src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=☕&slug=rbergua&button_colour=FFDD00&font_colour=000000&font_family=Lato&outline_colour=000000&coffee_colour=ffffff" />
+          <img id="bmc-btn" data-src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=☕&slug=rbergua&button_colour=FFDD00&font_colour=000000&font_family=Lato&outline_colour=000000&coffee_colour=ffffff" />
         </a>
         <span aria-hidden="true" style="flex:1 1 2px; max-width:50px;"></span> <!-- 2px is the minimum width defined between Buy me a coffee button and the visits box -->
-        <!-- Total visits box (GoatCounter): hidden until the count loads -->
-        <span id="visit-counter" style="display:none; flex-direction:column; align-items:center; justify-content:center; box-sizing:border-box; min-width:100px; padding:0 8px; border:1px solid #888; border-radius:12px; color:#888; text-align:center; line-height:1.1;">
+        <!-- Total visits box (GoatCounter): invisible (but keeps its space, so nothing shifts) until the count loads -->
+        <span id="visit-counter" style="display:flex; visibility:hidden; flex-direction:column; align-items:center; justify-content:center; box-sizing:border-box; min-width:100px; padding:0 8px; border:1px solid #888; border-radius:12px; color:#888; text-align:center; line-height:1.1;">
           <span style="font-size:0.75em;">Total visits</span>
-          <strong id="visit-count" style="font-size:1.3em;"></strong>
+          <strong id="visit-count" style="font-size:1.3em;">&nbsp;</strong>
           <span style="font-size:0.6em;">stats by GoatCounter</span>
         </span>
       </span>
@@ -691,7 +691,7 @@
     <h2>Contact &amp; support</h2>
     <p>
       More information and HTML code for the frontend is available on:<br>
-      <img src="https://cdn.simpleicons.org/github" alt="GitHub" style="height: 16px; vertical-align: middle;"> <a href="https://github.com/RBergua/boulderrides" target="_blank" rel="noopener noreferrer">https://github.com/RBergua/boulderrides</a>
+      <img data-src="https://cdn.simpleicons.org/github" alt="GitHub" style="height: 16px; vertical-align: middle;"> <a href="https://github.com/RBergua/boulderrides" target="_blank" rel="noopener noreferrer">https://github.com/RBergua/boulderrides</a>
     </p>
     <p>
       Questions or suggestions?<br>
@@ -703,11 +703,11 @@
     <!-- Strava attribution required by the Strava API Brand Guidelines. -->
     <div style="margin: 0px 0 20px; display: flex; justify-content: center; align-items: center; gap: 24px; flex-wrap: wrap; transform: translateX(-4px);">
       <a href="https://www.strava.com" target="_blank" rel="noopener noreferrer">
-        <img src="https://developers.strava.com/images/api_logo_pwrdBy_strava_horiz_light.png" alt="Powered by Strava" style="height: 34px;">
+        <img data-src="https://developers.strava.com/images/api_logo_pwrdBy_strava_horiz_light.png" alt="Powered by Strava" style="height: 34px;">
       </a>
       <!-- Ride with GPS attribution -->
       <a href="https://ridewithgps.com" target="_blank" rel="noopener noreferrer">
-        <img src="https://ridewithgps.com/images/logos/horizontal-logo.svg" alt="Ride with GPS" style="height: 30px;">
+        <img data-src="https://ridewithgps.com/images/logos/horizontal-logo.svg" alt="Ride with GPS" style="height: 30px;">
       </a>
     </div>
 
@@ -735,7 +735,7 @@
   <!-- BikeReg attribution: outside races-content so it renders after the dynamically appended race entries -->
   <p id="bikereg-attribution" style="display: none; text-align: center; max-width: 640px; margin: 0 auto 20px;">
     <a href="https://www.bikereg.com" target="_blank" rel="noopener noreferrer">
-      <img src="/assets/logos/BIKEREG.webp" style="height: 50px;">
+      <img data-src="/assets/logos/BIKEREG.webp" style="height: 50px;">
     </a>
   </p>
 
@@ -821,15 +821,33 @@
   }
 
   // -------------------------------
-  // Buy Me a Coffee button: preload a fresh image in the background and swap it in once ready.
-  // The static placeholder defined in HTML is visible immediately while the counter updates behind the scenes.
+  // Logos inside the "More" and "Races" pages (e.g., Buy me a coffee, GitHub, Strava, Ride with GPS, and BikeReg) carry data-src.
+  // They are not downloaded while the map loads.
+  // They start downloading when one of those pages is opened.
+  // -------------------------------
+  function loadDeferredImages(page) {
+    page.querySelectorAll('img[data-src]').forEach(img => {
+      img.src = img.dataset.src;
+      img.removeAttribute('data-src');
+    });
+  }
+
+  // -------------------------------
+  // Buy Me a Coffee button: not downloaded while the map loads (using data-src).
+  // First time "More" is opened, the fresh image (with the live counter) is loaded directly.
+  // On later opens, a fresh image is preloaded in the background and swapped in once ready, so the current button stays visible meanwhile.
   // -------------------------------
   window.openInfoPage = function() { // window. prefix makes this function accessible from the HTML button element.
-    document.getElementById('info-page').classList.add('open');
+    const infoPage = document.getElementById('info-page');
+    infoPage.classList.add('open');
 
     const base = "https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=☕&slug=rbergua&button_colour=FFDD00&font_colour=000000&font_family=Lato&outline_colour=000000&coffee_colour=ffffff";
+    const bmcImg = document.getElementById('bmc-btn');
     const anchor = document.querySelector('#info-content a[href*="buymeacoffee"]');
-    if (anchor) {
+    if (bmcImg && bmcImg.dataset.src) {        // First open: the button was never downloaded, so load the fresh one directly
+      bmcImg.removeAttribute('data-src');      // Remove data-src so loadDeferredImages() below skips this image (it would load it a second time)
+      bmcImg.src = base + '&v_=' + Date.now();
+    } else if (anchor) {
       const newImg = document.createElement('img');
       newImg.src = base + '&v_=' + Date.now(); // Timestamp forces a fresh fetch, bypassing the browser cache
       newImg.onload = () => {                  // Only swap once the new image is fully loaded (no flicker)
@@ -839,6 +857,7 @@
       };
     }
 
+    loadDeferredImages(infoPage);
     loadVisitCount();
   }
 
@@ -846,7 +865,7 @@
   // GoatCounter API with a secret token, so the token is never exposed here.
   // Fallback: GoatCounter's public counter (Settings -> Settings -> Sites -> Allow adding visitor counts on your website),
   // which caches responses for up to 4 hours, so it can lag behind the dashboard.
-  // The box with the visits count stays hidden if both fail.
+  // The box with the visits count stays invisible (keeping its space) until a count loads; if both fail, it collapses.
   const VISITS_WORKER_URL = 'https://boulderrides-visits.bergua-roger.workers.dev/';
 
   async function loadVisitCount() { // Load in parallel with other page elements, so the visit count appears asynchronously
@@ -866,9 +885,14 @@
       } catch {}
     }
 
-    if (count === null) return;
+    const counterBox = document.getElementById('visit-counter');
+    if (count === null) { // Both sources failed: collapse the reserved space, unless a count from an earlier open is already showing
+      if (counterBox.style.visibility !== 'visible') counterBox.style.display = 'none';
+      return;
+    }
     document.getElementById('visit-count').textContent = count;
-    document.getElementById('visit-counter').style.display = 'flex';
+    counterBox.style.display = 'flex';
+    counterBox.style.visibility = 'visible';
   }
 
   // -------------------------------
@@ -2331,8 +2355,9 @@
   window.loadRaces = function loadRaces() { // window.loadRaces in the global scope so it can be called from the button click
     const container = document.getElementById("races-content");
     if (!container) return;
+    loadDeferredImages(document.getElementById('races-page'));
 
-    // Remove only previously-rendered race entries and thei separators
+    // Remove only previously-rendered race entries and their separators
     container.querySelectorAll(".race-entry, hr:not(.static)").forEach(el => el.remove());
 
     // Get today's date for filtering. Avoid showing past races
