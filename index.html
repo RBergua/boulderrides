@@ -2580,10 +2580,15 @@ if ('serviceWorker' in navigator) {
 </script>
 
 <!-- Analytics (GoatCounter: privacy-friendly, no cookies) -->
+<!-- GoatCounter builds a temporary session key from site ID + User-Agent (e.g., Chrome or Firefox)+ IP address. It stores it for 8 hours. Recurring users count as 1 -->
+<!-- Users with AdBlocker are excluded from the counter -->
+<!-- Conservative visits count -->
 <script data-goatcounter="https://rbergua.goatcounter.com/count"
         async src="//gc.zgo.at/count.js">
 </script>
-<!-- Cloudflare Web Analytics (privacy-friendly, no cookies, data about load times) -->
+<!-- Cloudflare Web Analytics (privacy-friendly, no cookies, site load times information) -->
+<!-- Cloudflare counts every page load. Recurring users or refreshing the page count many times -->
+<!-- Users with AdBlocker are excluded from the counter -->
 <script data-cf-beacon='{"token": "affe55f22d6a423fb19e50cdbb16cfcd"}'
         async src="https://static.cloudflareinsights.com/beacon.min.js">
 </script>

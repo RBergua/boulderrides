@@ -5,8 +5,8 @@
 // WHY THIS EXISTS
 // ---------------
 // MapTiler's free tier allows 100,000 tile requests/month. Each
-// user loads may load roughly 200 tiles on their first visit. 
-// Once the limit is hit, the map falls back to Stadia Outdoors for 
+// user loads may load roughly 200 tiles on their first visit.
+// Once the limit is hit, the map falls back to Stadia Outdoors for
 // everyone for the rest of the month.
 //
 // This Service Worker solves that by making sure each device only
@@ -29,8 +29,8 @@
 // a typical Boulder-area session should be around 50 MB per user
 // including generous zomming in and out.
 //
-// Unlike the regular browser HTTP cache, this cache lasts much 
-// longer, survives hard-refreshes (Ctrl+Shift+R), tab closes, and 
+// Unlike the regular browser HTTP cache, this cache lasts much
+// longer, survives hard-refreshes (Ctrl+Shift+R), tab closes, and
 // mobile app background-kills.
 //
 // FASTER EXPERIENCE FOR THE USER
@@ -69,8 +69,8 @@
 //
 // Step 2 — Confirm cache is used on reload:
 //   Reload with Ctrl+R → Network tab
-//   Every tile should show "(ServiceWorker)" or "(disk cache)"in 
-//   the Size column instead of a file size. That means zero bytes 
+//   Every tile should show "(ServiceWorker)" or "(disk cache)"in
+//   the Size column instead of a file size. That means zero bytes
 //   were fetched from the network.
 //   The key check is 0.0 kB transferred in the bottom bar.
 //
@@ -124,7 +124,7 @@ self.addEventListener('fetch', event => {
   // Only intercept MapTiler vector tiles requests. Ignore everything else.
   // HEAD requests (used for the availability) are not cached
   if (!url.includes('api.maptiler.com/tiles/')) return;
-  
+
   if (event.request.method !== 'GET') return;
 
   const cacheKey = normalizeRequest(event.request);
@@ -137,18 +137,18 @@ self.addEventListener('fetch', event => {
 
       if (cached) {
         const cachedTime = cached.headers.get('sw-cache-time');
-        
+
         if (cachedTime) {
           const age = (Date.now() - parseInt(cachedTime, 10)) / 1000;
 
-          // If the cached tile is still fresh, return it immediately  
+          // If the cached tile is still fresh, return it immediately
           if (age < MAX_AGE_SEC) {
             return cached;
           }
 
           // Expired: block and fetch fresh from MapTiler
           await cache.delete(cacheKey);
-        } 
+        }
       }
 
       // 2. Cache miss: fetch from MapTiler
