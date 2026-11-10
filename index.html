@@ -1041,7 +1041,7 @@
 
   // Refresh toast helper. Used when the user returns to the app after 5 minutes or more.
   // state: 'checking' (blue, stays until replaced by a result), 'success' (green) or 'error' (red).
-  // Results fade out after 15 s.
+  // Results fade out after 5 s.
   const refreshToast = document.getElementById('refresh-toast');
   let refreshToastTimer = null;
 
@@ -1052,7 +1052,7 @@
     refreshToast.classList.add(state);
     refreshToast.classList.add('visible');
     if (state !== 'checking') {
-      refreshToastTimer = setTimeout(() => refreshToast.classList.remove('visible'), 15000); // 15 s
+      refreshToastTimer = setTimeout(() => refreshToast.classList.remove('visible'), 5000); // 5 s
     }
   }
 
