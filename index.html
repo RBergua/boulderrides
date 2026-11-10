@@ -1170,7 +1170,7 @@
   const ridesReady = (async () => {
     const res = await fetch(DATA_BASE_URL + 'club_rides.json', { cache: 'no-cache' }); // Same URL as the <link rel="preload"> in <head>, so the browser reuses that download. 'no-cache' = check with the server before reusing a saved copy. Refresh interval is 5 min.
     const rides = await res.json();
-    lastDataString = JSON.stringify(rides); // Store a snapshot of the data for future change detection
+    saveSnapshot('club_rides.json', rides); // Store a snapshot of the data for future change detection
     //console.timeEnd('[PERF] app start → club_rides.json ready'); // Debugging performance
     setProgress(50, 'Loading races…');          // Progress bar. Milestone 2: ride data ready
 
@@ -1192,6 +1192,7 @@
   const racesReady = (async () => {
     const res = await fetch(DATA_BASE_URL + 'races.json', { cache: 'no-cache' }); // See club_rides.json above
     allRaces = await res.json();
+    saveSnapshot('races.json', allRaces);  // Store a snapshot of the data for future change detection
     setProgress(75, 'Preparing map…');          // Progress bar. Milestone 3: race data ready
 
     // Group races by date (YYYY-MM-DD). A multi-day race is indexed under each of its dates.
@@ -1217,6 +1218,7 @@
     try {
       const res = await fetch(DATA_BASE_URL + 'weather.json', { cache: 'no-cache' }); // See club_rides.json above
       weatherByDate = await res.json();
+      saveSnapshot('weather.json', weatherByDate);  // Store a snapshot of the data for future change detection
     } catch {
       weatherByDate = {}; // Missing/broken file. updateWeather() will just hide the widget
     }
@@ -1266,7 +1268,9 @@
     if (!ENABLE_DETAILED_WEATHER) return;
     try {
       const res = await fetch(DATA_BASE_URL + 'detailed_weather.json', { cache: 'no-cache' }); // See club_rides.json above
-      applyDetailedWeather(await res.json());
+      const data = await res.json();
+      saveSnapshot('detailed_weather.json', data);  // Store a snapshot of the data for future change detection
+      applyDetailedWeather(data);
     } catch {
       detailedWeatherKeys = new Set(); // Missing/broken file. The "Weather" button just stays hidden
     }
@@ -1294,53 +1298,44 @@
   // -------------------------------
   // Old data in long-lived sessions (smart refresh on visibility restore)
   // -------------------------------
-  // We do a cheap HEAD request for each JSON file and compare the server's Last-Modified
-  // header against the timestamp of our last successful full fetch.
-  // We only download the file body when the server copy is actually newer.
+  // We re-request each JSON file with cache: 'no-cache', so the browser revalidates with the server
+  // (a cheap "304 Not Modified" when nothing changed) and then compare the content against the snapshot
+  // of what's currently displayed. GitHub's raw host sends no Last-Modified, so comparing the content
+  // is the only reliable way to detect a change.
 
-  let lastDataString     = null;    // Snapshot of rides data to detect content changes
   let calendarAnchorDate = formatLocalDate(new Date()); // The date on which the calendar was last generated
   let refreshInProgress  = false; // Prevents overlapping background refreshes
 
-  // Files kept fresh. fetchedAt = last full body download, checkedAt = last HEAD check (or fetch).
+  // Files kept fresh. snapshot = JSON string of the data currently displayed (null = unknown).
+  // checkedAt = last successful check.
   const refreshFiles = [
     'club_rides.json',
     'races.json',
     ...(ENABLE_WEATHER ? ['weather.json'] : []),
     ...(ENABLE_DETAILED_WEATHER ? ['detailed_weather.json'] : [])
-  ].map(name => ({ name, fetchedAt: Date.now(), checkedAt: Date.now() }));
+  ].map(name => ({ name, snapshot: null, checkedAt: Date.now() }));
 
-  // Minimum time between HEAD checks.
+  // Saves a text copy (snapshot) of the data currently displayed. On a refresh, the freshly fetched data
+  // is compared against it: identical → "Up to date", different → apply it and show "Updated".
+  function saveSnapshot(fileName, data) {
+    const file = refreshFiles.find(f => f.name === fileName);
+    if (file) file.snapshot = JSON.stringify(data);
+  }
+
+  // Minimum time between checks.
   // Prevents excessive network calls when users rapidly switch tabs/apps.
   // Also used to refresh the Buy Me a Coffee button and the visit count on the "More" page.
   const MIN_REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes in ms
 
-  // Returns:
-  //   true  - server file is newer than the last downloaded copy
-  //   false - server file is unchanged
-  //   null  - the server could not be checked
-  // Uses a HEAD request, so it's very cheap.
-  async function serverFileIsNewer(url, lastFetchTime) {
-    try {
-      const res = await fetch(url, { method: 'HEAD', cache: 'no-store' });
-      if (!res.ok) return null;
-
-      // Header absent or invalid but server reachable → report "newer" so we re-fetch to be safe
-      const lastModified = res.headers.get('Last-Modified');
-      const serverTime   = lastModified ? new Date(lastModified).getTime() : NaN;
-      if (!Number.isFinite(serverTime)) return true;
-
-      return serverTime > lastFetchTime;
-    } catch {
-      return null; // No network / server unreachable
-    }
-  }
-
-  // Fetches a JSON file and rejects on HTTP errors.
+  // Fetches a JSON file, revalidating with the server. Returns null if it could not be fetched.
   async function fetchJson(fileName) {
-    const res = await fetch(DATA_BASE_URL + fileName + '?v=' + Date.now(), { cache: 'no-store' });
-    if (!res.ok) throw new Error('Could not download ' + fileName);
-    return res.json();
+    try {
+      const res = await fetch(DATA_BASE_URL + fileName, { cache: 'no-cache' });
+      if (!res.ok) return null;
+      return await res.json();
+    } catch {
+      return null; // No network / server unreachable / invalid JSON
+    }
   }
 
   // Listen for when the tab/app becomes visible again
@@ -1363,14 +1358,14 @@
     showRefreshToast('Checking for updates…', 'checking');
 
     try {
-      // HEAD-check only the files that passed the debounce window
-      const newer = await Promise.all(due.map(f => serverFileIsNewer(DATA_BASE_URL + f.name, f.fetchedAt)));
+      // Check only the files that passed the debounce window
+      const results = await Promise.all(due.map(f => fetchJson(f.name)));
 
-      // Update check timestamps only for HEAD requests that succeeded, so failures are retried next time
+      // Update check timestamps only for files that were fetched, so failures are retried next time
       const checkedAt = Date.now();
-      due.forEach((f, i) => { if (newer[i] !== null) f.checkedAt = checkedAt; });
+      due.forEach((f, i) => { if (results[i] !== null) f.checkedAt = checkedAt; });
 
-      const checkFailed = newer.includes(null);
+      const checkFailed = results.includes(null);
 
       // Rebuild calendar if the day rolled over (always, regardless of data)
       if (dayChanged) {
@@ -1380,44 +1375,39 @@
         // console.log('Day changed, calendar rebuilt.'); // Testing
       }
 
-      // Only download files the server reports as newer
-      const stale = due.filter((f, i) => newer[i] === true);
+      // Only apply files whose content differs from what is displayed
+      const downloaded = {};
+      const changedFiles = [];
+      due.forEach((f, i) => {
+        if (results[i] === null) return;
+        const newSnapshot = JSON.stringify(results[i]);
+        if (newSnapshot === f.snapshot) return;
+        changedFiles.push({ file: f, newSnapshot });
+        downloaded[f.name] = results[i];
+      });
 
-      // Nothing to download
-      if (!stale.length) {
+      // Nothing changed
+      if (!changedFiles.length) {
         if (checkFailed) showRefreshToast('Could not check for updates', 'error');
         else showRefreshToast('✓ Up to date', 'success');
         return;
       }
 
-      // Rejects if any download fails, so nothing is applied and the existing data stays
-      const downloads = await Promise.all(stale.map(f => fetchJson(f.name)));
-      const downloaded = {};
-      stale.forEach((f, i) => {
-        f.fetchedAt = now; // Visit start, so a file updated mid-download is still seen as newer next time
-        downloaded[f.name] = downloads[i];
-      });
       const rides           = downloaded['club_rides.json'];
       const races           = downloaded['races.json'];
       const weather         = downloaded['weather.json'];
       const detailedWeather = downloaded['detailed_weather.json'];
 
       // ── Update rides ──────────────────────────────────────────────────────
-      let ridesChanged = false;
-      if (rides) {
-        const newDataString = JSON.stringify(rides);
-        ridesChanged = (newDataString !== lastDataString);
-        lastDataString = newDataString;
-
-        if (ridesChanged) { // Rebuild ridesByDate with fresh data
-          const newRidesByDate = {};
-          rides.forEach(ride => {
-            const date = ride.date.split(" ")[0]; // Extract YYYY-MM-DD
-            if (!newRidesByDate[date]) newRidesByDate[date] = [];
-            newRidesByDate[date].push(ride);
-          });
-          ridesByDate = newRidesByDate;
-        }
+      const ridesChanged = !!rides;
+      if (rides) { // Rebuild ridesByDate with fresh data
+        const newRidesByDate = {};
+        rides.forEach(ride => {
+          const date = ride.date.split(" ")[0]; // Extract YYYY-MM-DD
+          if (!newRidesByDate[date]) newRidesByDate[date] = [];
+          newRidesByDate[date].push(ride);
+        });
+        ridesByDate = newRidesByDate;
       }
 
       // ── Update races ──────────────────────────────────────────────────────
@@ -1463,6 +1453,9 @@
         if (selected?.dataset.date) updateWeather(selected.dataset.date);
       }
       if (detailedWeather) applyDetailedWeather(detailedWeather);
+
+      // Remember what is now displayed, so the next check compares against it
+      changedFiles.forEach(({ file, newSnapshot }) => { file.snapshot = newSnapshot; });
 
       if (checkFailed) showRefreshToast('Updated, but some data could not be checked', 'error');
       else showRefreshToast('✓ Updated', 'success');
