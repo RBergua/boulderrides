@@ -75,7 +75,7 @@
 //   The key check is 0.0 kB transferred in the bottom bar.
 //
 // Step 3 — Confirm the cache contents:
-//   Cache size:    Application tab → Storage (left sidebar) → maptiler-tiles-v2
+//   Cache size:    Application tab → Storage (left sidebar) → maptiler-tiles-v1
 //   Cached files:  Application tab → Cache Storage (left sidebar) → maptiler-tiles-v1 → Cached Requests
 // ============================================================
 
@@ -85,6 +85,18 @@ const MAX_AGE_SEC = 120 * 24 * 3600;      // 120 days in seconds
 function normalizeRequest(request) {
   const url = new URL(request.url);
   return new Request(url.origin + url.pathname);
+}
+
+// Stores a copy of the tile with a timestamp header, used later to expire it.
+async function saveTile(cache, cacheKey, response) {
+  const headers = new Headers(response.headers);
+  headers.set('sw-cache-time', Date.now().toString());
+
+  await cache.put(cacheKey, new Response(await response.arrayBuffer(), {
+    status: response.status,
+    statusText: response.statusText,
+    headers
+  }));
 }
 
 // Runs once when this SW version activates (fresh install or after a CACHE_NAME bump).
@@ -128,48 +140,43 @@ self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
 
   const cacheKey = normalizeRequest(event.request);
+  let saving = Promise.resolve(); // Replaced by the background cache write on a successful network fetch
 
-  event.respondWith(
-    caches.open(CACHE_NAME).then(async cache => {
+  const tile = caches.open(CACHE_NAME).then(async cache => {
 
-      // 1. Check the cache first
-      const cached = await cache.match(cacheKey);
+    // 1. Check the cache first
+    const cached = await cache.match(cacheKey);
 
-      if (cached) {
-        const cachedTime = cached.headers.get('sw-cache-time');
+    if (cached) {
+      const cachedTime = cached.headers.get('sw-cache-time');
 
-        if (cachedTime) {
-          const age = (Date.now() - parseInt(cachedTime, 10)) / 1000;
+      if (cachedTime) {
+        const age = (Date.now() - parseInt(cachedTime, 10)) / 1000;
 
-          // If the cached tile is still fresh, return it immediately
-          if (age < MAX_AGE_SEC) {
-            return cached;
-          }
-
-          // Expired: block and fetch fresh from MapTiler
-          await cache.delete(cacheKey);
+        // If the cached tile is still fresh, return it immediately
+        if (age < MAX_AGE_SEC) {
+          return cached;
         }
+
+        // Expired: block and fetch fresh from MapTiler
+        await cache.delete(cacheKey);
       }
+    }
 
-      // 2. Cache miss: fetch from MapTiler
-      const response = await fetch(event.request);
+    // 2. Cache miss: fetch from MapTiler
+    const response = await fetch(event.request);
 
-      // 3. Save a clean copy to cache with timestamp (only if the request succeeded)
-      if (response.ok) {
-        const headers = new Headers(response.headers);
-        headers.set('sw-cache-time', Date.now().toString());
+    // 3. Save a copy in the background (only if the request succeeded)
+    if (response.ok) {
+      saving = saveTile(cache, cacheKey, response.clone())
+        .catch(() => {}); // Ignore write errors (e.g. storage full): the tile is simply fetched again next time
+    }
 
-        const responseToCache = new Response(await response.clone().arrayBuffer(), {
-          status: response.status,
-          statusText: response.statusText,
-          headers
-        });
+    // 4. Return the original response to the browser immediately
+    return response;
+  });
 
-        await cache.put(cacheKey, responseToCache);
-      }
-
-      // 4. Return the original response to the browser
-      return response;
-    })
-  );
+  // Both are registered synchronously.
+  event.respondWith(tile);
+  event.waitUntil(tile.then(() => saving, () => {})); // Keeps the SW alive until the background write finishes
 });
