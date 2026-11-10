@@ -401,6 +401,43 @@
       transition: width 0.3s ease;
     }
 
+    /* Translucent pill for background data refreshes when the user returns.
+       Floats over the map: clicks pass through. */
+    #refresh-toast {
+      position: fixed;
+      left: 50%;
+      top: 74px; /* 64px calendar height + 10px gap, same as the weather widget */
+      transform: translate(-50%, -8px);
+      z-index: 1500;
+      max-width: calc(100% - 32px);
+      box-sizing: border-box;
+      padding: 6px 16px;
+      border: 1px solid transparent;
+      border-radius: 20px;
+      backdrop-filter: blur(4px);
+      font-family: Arial, sans-serif;
+      font-size: 0.9em;
+      font-weight: 600;
+      line-height: 1.4;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+    }
+
+    #refresh-toast.visible {
+      opacity: 1;
+      visibility: visible;
+      transform: translate(-50%, 0);
+    }
+
+    /* State colors, set by showRefreshToast() */
+    #refresh-toast.checking { background: rgba(240, 246, 255, 0.92); color: #007bff; border-color: #cce0ff; }  /* Blue */
+    #refresh-toast.success  { background: rgba(240, 255, 244, 0.92); color: #28a745; border-color: #b2dfdb; }  /* Green */
+    #refresh-toast.error    { background: rgba(255, 240, 241, 0.92); color: #dc3545; border-color: #f5c2c7; }  /* Red */
+
     /* Remove MapLibre GL JS focus outline on routes */
     .maplibregl-canvas:focus { outline: none; }
 
@@ -491,6 +528,9 @@
 
 <!-- Full-screen map -->
 <div id="map"></div>
+
+<!-- Temporary notification for background data refreshes when the user returns (separate from #map so it never affects the map) -->
+<div id="refresh-toast" role="status" aria-live="polite"></div>
 
 <!-- Weather widget (top-right gray box) -->
 <div id="weather-widget" style="
@@ -999,13 +1039,21 @@
     setTimeout(() => loadingOverlay.classList.add('hidden'), 500); // wait for fill transition, then fade out
   }
 
-  // Shows again the same full-screen overlay used on first load.
-  // Called when the app is restored after ≥5 min or the day has rolled over.
-  function showLoadingOverlay(label) {
-    _progress = 0;                              // reset bar to empty
-    loadingBarFill.style.width = '0%';
-    loadingLabel.textContent = label || 'Loading group rides…';
-    loadingOverlay.classList.remove('hidden'); // make it visible again
+  // Refresh toast helper. Used when the user returns to the app after 5 minutes or more.
+  // state: 'checking' (blue, stays until replaced by a result), 'success' (green) or 'error' (red).
+  // Results fade out after 15 s.
+  const refreshToast = document.getElementById('refresh-toast');
+  let refreshToastTimer = null;
+
+  function showRefreshToast(message, state) {
+    clearTimeout(refreshToastTimer); // A stale timer must not hide a newer message
+    refreshToast.textContent = message;
+    refreshToast.classList.remove('checking', 'success', 'error');
+    refreshToast.classList.add(state);
+    refreshToast.classList.add('visible');
+    if (state !== 'checking') {
+      refreshToastTimer = setTimeout(() => refreshToast.classList.remove('visible'), 15000); // 15 s
+    }
   }
 
   // API key is locked to boulderrides.cc domain. Safe to expose in the frontend.
@@ -1196,15 +1244,20 @@
   // Set of "<ride_title>|<date>" keys whose detailed forecast has status "available"
   let detailedWeatherKeys = new Set();
 
+  // Rebuilds the keys from detailed_weather.json data and refreshes the open ride card, if any.
+  function applyDetailedWeather(data) {
+    detailedWeatherKeys = new Set();
+    for (const r of data.rides || []) {
+      if (r.status === 'available') detailedWeatherKeys.add(r.ride_title + '|' + r.date);
+    }
+    if (selectedRide) updateSheetWeather(selectedRide);
+  }
+
   (async () => {
     if (!ENABLE_DETAILED_WEATHER) return;
     try {
       const res = await fetch(DATA_BASE_URL + 'detailed_weather.json', { cache: 'no-cache' }); // See club_rides.json above
-      const data = await res.json();
-      for (const r of data.rides || []) {
-        if (r.status === 'available') detailedWeatherKeys.add(r.ride_title + '|' + r.date);
-      }
-      if (selectedRide) updateSheetWeather(selectedRide);
+      applyDetailedWeather(await res.json());
     } catch {
       detailedWeatherKeys = new Set(); // Missing/broken file. The "Weather" button just stays hidden
     }
@@ -1229,176 +1282,188 @@
   });
 
   // -------------------------------
-  // Old routes data in long-lived sessions (smart refresh on visibility restore)
+  // Old data in long-lived sessions (smart refresh on visibility restore)
   // -------------------------------
   // We do a cheap HEAD request for each JSON file and compare the server's Last-Modified
   // header against the timestamp of our last successful full fetch.
   // We only download the file body when the server copy is actually newer.
 
   let lastDataString     = null;    // Snapshot of rides data to detect content changes
-  let lastRidesFetchTime  = Date.now(); // time of last full body download
-  let lastRacesFetchTime  = Date.now(); // time of last full body download
-  let lastRidesCheckTime  = Date.now(); // time of last HEAD check (or fetch)
-  let lastRacesCheckTime  = Date.now(); // time of last HEAD check (or fetch)
   let calendarAnchorDate = formatLocalDate(new Date()); // The date on which the calendar was last generated
+  let refreshInProgress  = false; // Prevents overlapping background refreshes
+
+  // Files kept fresh. fetchedAt = last full body download, checkedAt = last HEAD check (or fetch).
+  const refreshFiles = [
+    'club_rides.json',
+    'races.json',
+    ...(ENABLE_WEATHER ? ['weather.json'] : []),
+    ...(ENABLE_DETAILED_WEATHER ? ['detailed_weather.json'] : [])
+  ].map(name => ({ name, fetchedAt: Date.now(), checkedAt: Date.now() }));
 
   // Minimum time between HEAD checks.
   // Prevents excessive network calls when users rapidly switch tabs/apps.
   const MIN_REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes in ms
 
-  // Returns true if the server file was modified after `lastFetchTime`.
-  // Uses a HEAD request, no body downloaded, so it's very cheap.
-  // Falls back to true (force re-fetch) if the header is missing or the request fails.
+  // Returns:
+  //   true  - server file is newer than the last downloaded copy
+  //   false - server file is unchanged
+  //   null  - the server could not be checked
+  // Uses a HEAD request, so it's very cheap.
   async function serverFileIsNewer(url, lastFetchTime) {
     try {
       const res = await fetch(url, { method: 'HEAD', cache: 'no-store' });
-      if (!res.ok) return false;              // Server error → keep old data
+      if (!res.ok) return null;
+
+      // Header absent or invalid but server reachable → report "newer" so we re-fetch to be safe
       const lastModified = res.headers.get('Last-Modified');
-      if (!lastModified) return true; // Header absent but server reachable → re-fetch to be safe
-      return new Date(lastModified).getTime() > lastFetchTime;
+      const serverTime   = lastModified ? new Date(lastModified).getTime() : NaN;
+      if (!Number.isFinite(serverTime)) return true;
+
+      return serverTime > lastFetchTime;
     } catch {
-      return false; // No network / server unreachable → keep old data
+      return null; // No network / server unreachable
     }
+  }
+
+  // Fetches a JSON file and rejects on HTTP errors.
+  async function fetchJson(fileName) {
+    const res = await fetch(DATA_BASE_URL + fileName + '?v=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) throw new Error('Could not download ' + fileName);
+    return res.json();
   }
 
   // Listen for when the tab/app becomes visible again
   // This is especially important for PWA/mobile users who background the app
-  document.addEventListener('visibilitychange', () => {
+  // The map stays visible during the check; progress is reported through the refresh toast.
+  document.addEventListener('visibilitychange', async () => {
     if (document.visibilityState !== 'visible') return; // We only refresh when the user returns, not when they leave
+    if (refreshInProgress) return;
 
     const now        = Date.now();
     const todayDate  = formatLocalDate(new Date());
     const dayChanged = todayDate !== calendarAnchorDate; // If the calendar was built on a previous day, rebuild it now regardless of the MIN_REFRESH_INTERVAL. The day has rolled over!
 
-    // Debounce: skip if we checked both files very recently (e.g., ≤5 min)and the day hasn't rolled over
-    const ridesCheckedRecently = (now - lastRidesCheckTime < MIN_REFRESH_INTERVAL);
-    const racesCheckedRecently = (now - lastRacesCheckTime < MIN_REFRESH_INTERVAL);
-    if (!dayChanged && ridesCheckedRecently && racesCheckedRecently) return;
+    // Debounce: skip (silently) if every file was checked very recently (≤5 min) and the day hasn't rolled over.
+    // A day rollover makes all files due, since the forecast moves with the date.
+    const due = refreshFiles.filter(f => dayChanged || now - f.checkedAt >= MIN_REFRESH_INTERVAL);
+    if (!due.length) return;
 
-    // Show the full-screen loading overlay. This is the same one as app startup
-    showLoadingOverlay('Refreshing ride data…'); // Progress bar. Milestone 1: user returned. We see this always, regardless of new data
-    setProgress(10);
+    refreshInProgress = true;
+    showRefreshToast('Checking for updates…', 'checking');
 
-    //console.log(`visibilitychange: checking server files…`); // Testing
+    try {
+      // HEAD-check only the files that passed the debounce window
+      const newer = await Promise.all(due.map(f => serverFileIsNewer(DATA_BASE_URL + f.name, f.fetchedAt)));
 
-    // Run HEAD checks for files that passed the debounce window (or day changed)
-    const ridesCheck = (!dayChanged && ridesCheckedRecently)
-      ? Promise.resolve(false)                                          // Still fresh. Skip
-      : serverFileIsNewer(DATA_BASE_URL + 'club_rides.json', lastRidesFetchTime);       // Request the server
+      // Update check timestamps only for HEAD requests that succeeded, so failures are retried next time
+      const checkedAt = Date.now();
+      due.forEach((f, i) => { if (newer[i] !== null) f.checkedAt = checkedAt; });
 
-    const racesCheck = (!dayChanged && racesCheckedRecently)
-      ? Promise.resolve(false)
-      : serverFileIsNewer(DATA_BASE_URL + 'races.json', lastRacesFetchTime);
+      const checkFailed = newer.includes(null);
 
-    Promise.all([ridesCheck, racesCheck])
-      .then(([ridesNewer, racesNewer]) => {
+      // Rebuild calendar if the day rolled over (always, regardless of data)
+      if (dayChanged) {
+        calendarAnchorDate = todayDate;
+        document.getElementById('calendar').innerHTML = ''; // Clear old day columns
+        generateCalendar();
+        // console.log('Day changed, calendar rebuilt.'); // Testing
+      }
 
-        // Update check timestamps
-        if (!ridesCheckedRecently || dayChanged) lastRidesCheckTime = now;
-        if (!racesCheckedRecently || dayChanged) lastRacesCheckTime = now;
+      // Only download files the server reports as newer
+      const stale = due.filter((f, i) => newer[i] === true);
 
-        // Rebuild calendar if the day rolled over (always, regardless of data)
-        // ── Rebuild calendar if the day rolled over ───────────────────────────
-        if (dayChanged) {
-          calendarAnchorDate = todayDate;
-          const calendarDiv  = document.getElementById("calendar");
-          calendarDiv.innerHTML = ""; // Clear old day columns
-          generateCalendar();
-          //console.log('Day changed: calendar rebuilt'); // Testing
-        }
+      // Nothing to download
+      if (!stale.length) {
+        if (checkFailed) showRefreshToast('Could not check for updates', 'error');
+        else showRefreshToast('✓ Up to date', 'success');
+        return;
+      }
 
-        // Data-driven decisions: only download if server is actually newer
-        const fetchRides = ridesNewer;
-        const fetchRaces = racesNewer;
-
-        //console.log(`Rides: ${ridesCheckedRecently && !dayChanged ? 'skipped (debounced)' : ridesNewer ? 'server is newer, downloading…' : 'up to date'}`); // Testing
-        //console.log(`Races: ${racesCheckedRecently && !dayChanged ? 'skipped (debounced)' : racesNewer ? 'server is newer, downloading…' : 'up to date'}`); // Testing
-
-        // Nothing on the server has changed. We're done
-        if (!fetchRides && !fetchRaces) { hideLoadingOverlay(); return; }
-
-        setProgress(40, 'Loading rides…'); // Progress bar. Milestone 2: data downloaded
-
-        const ridesFetch = fetchRides
-          ? fetch(DATA_BASE_URL + 'club_rides.json?v=' + now, { cache: 'no-store' }).then(r => r.json())
-          : Promise.resolve(null);
-
-        const racesFetch = fetchRaces
-          ? fetch(DATA_BASE_URL + 'races.json?v=' + now, { cache: 'no-store' }).then(r => r.json())
-          : Promise.resolve(null);
-
-        return Promise.all([ridesFetch, racesFetch]);
-      })
-      .then(result => {
-        if (!result) return; // Both files were fresh. Nothing to do
-
-        setProgress(75, 'Preparing map…'); // Progress bar. Milestone 3: race data ready
-
-        const [rides, races] = result;
-
-        // ── Update rides ──────────────────────────────────────────────────────
-        let ridesChanged = false;
-        if (rides !== null) {
-          lastRidesFetchTime = now;
-
-          const newDataString = JSON.stringify(rides);
-          ridesChanged = (newDataString !== lastDataString);
-          lastDataString = newDataString;
-
-          if (ridesChanged) { // Rebuild ridesByDate with fresh data
-            const newRidesByDate = {};
-            rides.forEach(ride => {
-              const date = ride.date.split(" ")[0]; // Extract YYYY-MM-DD
-              if (!newRidesByDate[date]) newRidesByDate[date] = [];
-              newRidesByDate[date].push(ride);
-            });
-            ridesByDate = newRidesByDate;
-            //console.log('Rides changed: map will re-render'); // Testing
-          }
-        }
-        // ── Update races ──────────────────────────────────────────────────────
-        if (races !== null) {
-          lastRacesFetchTime = now;
-
-          const newRacesByDate = {};
-          races.forEach(race => {
-            const dates = Array.isArray(race.date) ? race.date : [race.date];
-            dates.forEach(date => {
-              const iso = formatLocalDate(parseLocalDate(date));  // normalize to YYYY-MM-DD, same as rides
-              if (!newRacesByDate[iso]) newRacesByDate[iso] = [];
-              newRacesByDate[iso].push(race);
-            });
-          });
-          racesByDate = newRacesByDate;
-          allRaces    = races;
-        }
-
-        // ── Refresh calendar day highlights ───────────────────────────────────
-        if (ridesChanged || races !== null) {
-          document.querySelectorAll('.day-column').forEach(col => {
-            const date    = col.dataset.date;
-            const hasData = (ridesByDate[date]?.length || 0) > 0 || (racesByDate[date]?.length || 0) > 0;
-            col.classList.toggle('ride-day', hasData);
-          });
-        }
-
-        // ── Re-render selected day only if rides content actually changed ─────
-        if (ridesChanged) {
-          const selected = document.querySelector('.day-column.selected');
-          if (selected?.dataset.date) {
-            if (map.isStyleLoaded()) {
-              loadRoutes(selected.dataset.date);
-            } else {
-              map.once('style.load', () => loadRoutes(selected.dataset.date));
-            }
-          }
-        }
-        hideLoadingOverlay();
-      })
-      .catch(() => {
-        // Fail silently: keep existing data, try again next visibility event
-        hideLoadingOverlay();
+      // Rejects if any download fails, so nothing is applied and the existing data stays
+      const downloads = await Promise.all(stale.map(f => fetchJson(f.name)));
+      const downloaded = {};
+      stale.forEach((f, i) => {
+        f.fetchedAt = now; // Visit start, so a file updated mid-download is still seen as newer next time
+        downloaded[f.name] = downloads[i];
       });
+      const rides           = downloaded['club_rides.json'];
+      const races           = downloaded['races.json'];
+      const weather         = downloaded['weather.json'];
+      const detailedWeather = downloaded['detailed_weather.json'];
+
+      // ── Update rides ──────────────────────────────────────────────────────
+      let ridesChanged = false;
+      if (rides) {
+        const newDataString = JSON.stringify(rides);
+        ridesChanged = (newDataString !== lastDataString);
+        lastDataString = newDataString;
+
+        if (ridesChanged) { // Rebuild ridesByDate with fresh data
+          const newRidesByDate = {};
+          rides.forEach(ride => {
+            const date = ride.date.split(" ")[0]; // Extract YYYY-MM-DD
+            if (!newRidesByDate[date]) newRidesByDate[date] = [];
+            newRidesByDate[date].push(ride);
+          });
+          ridesByDate = newRidesByDate;
+        }
+      }
+
+      // ── Update races ──────────────────────────────────────────────────────
+      if (races) {
+        const newRacesByDate = {};
+        races.forEach(race => {
+          const dates = Array.isArray(race.date) ? race.date : [race.date];
+          dates.forEach(date => {
+            const iso = formatLocalDate(parseLocalDate(date));  // normalize to YYYY-MM-DD, same as rides
+            if (!newRacesByDate[iso]) newRacesByDate[iso] = [];
+            newRacesByDate[iso].push(race);
+          });
+        });
+        racesByDate = newRacesByDate;
+        allRaces    = races;
+      }
+
+      // ── Refresh calendar day highlights ───────────────────────────────────
+      if (ridesChanged || races) {
+        document.querySelectorAll('.day-column').forEach(col => {
+          const date    = col.dataset.date;
+          const hasData = (ridesByDate[date]?.length || 0) > 0 || (racesByDate[date]?.length || 0) > 0;
+          col.classList.toggle('ride-day', hasData);
+        });
+      }
+
+      // ── Re-render selected day only if rides content actually changed ─────
+      if (ridesChanged) {
+        const selected = document.querySelector('.day-column.selected');
+        if (selected?.dataset.date) {
+          if (map.isStyleLoaded()) {
+            loadRoutes(selected.dataset.date);
+          } else {
+            map.once('style.load', () => loadRoutes(selected.dataset.date));
+          }
+        }
+      }
+
+      // ── Update weather ────────────────────────────────────────────────────
+      if (weather) {
+        weatherByDate = weather;
+        const selected = document.querySelector('.day-column.selected');
+        if (selected?.dataset.date) updateWeather(selected.dataset.date);
+      }
+      if (detailedWeather) applyDetailedWeather(detailedWeather);
+
+      if (checkFailed) showRefreshToast('Updated, but some data could not be checked', 'error');
+      else showRefreshToast('✓ Updated', 'success');
+
+    } catch (error) {
+      // Keep existing data; the download is retried after the debounce window
+      console.warn('Background data refresh failed:', error);
+      showRefreshToast('Update failed. Showing existing data', 'error');
+
+    } finally {
+      refreshInProgress = false;
+    }
   });
 
   // -------------------------------
