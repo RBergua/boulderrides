@@ -554,7 +554,7 @@
 <!-- Collapsible panel holding More / Races / GPX/List / Metric (hidden until hamburger is clicked) -->
 <div id="menu-panel">
   <!-- "More" info button -->
-  <!-- We call openInfoPage() function instead of "document.getElementById('info-page').classList.add('open');" here to refresh the Buy Me a Coffee button -->
+  <!-- We call openInfoPage() function instead of "document.getElementById('info-page').classList.add('open');" here to refresh the Buy Me a Coffee button if it is stale -->
   <button id="info-btn" class="overlay-btn"
           onclick="openInfoPage(); closeMenuPanel()">More</button>
 
@@ -599,7 +599,7 @@
     <p style="font-size: 0.9em; color: #888;">
       Established March 2026. This project is free and runs 24/7 on a personal server. If it's gotten you out on a ride, you can support it:
       <span style="display:flex; align-items:stretch; flex-wrap:wrap; gap:12px 0; margin:6px 0;"> <!-- The spacer below is at least 3px and grows up to 50px when there is room. If the box can't fit with 3px, it drops below the button. -->
-        <!-- "Buy me a coffee" smart button (id="bmc-btn"): updating counter when opening "More" page -->
+        <!-- "Buy me a coffee" smart button (id="bmc-btn"): preloaded once the map is idle, refreshed (updating the counter) when opening "More" if stale -->
         <a href="https://www.buymeacoffee.com/rbergua">
           <img id="bmc-btn" data-src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=☕&slug=rbergua&button_colour=FFDD00&font_colour=000000&font_family=Lato&outline_colour=000000&coffee_colour=ffffff" />
         </a>
@@ -864,7 +864,7 @@
   // -------------------------------
   // Logos inside the "More" and "Races" pages (e.g., Buy me a coffee, GitHub, Strava, Ride with GPS, and BikeReg) carry data-src.
   // They are not downloaded while the map loads.
-  // They start downloading when one of those pages is opened.
+  // They start downloading when one of those pages is opened (or the Buy me a coffee button and the visit count is preloaded once the map is idle).
   // -------------------------------
   function loadDeferredImages(page) {
     page.querySelectorAll('img[data-src]').forEach(img => {
@@ -874,19 +874,21 @@
   }
 
   // -------------------------------
-  // Buy Me a Coffee button: not downloaded while the map loads (using data-src).
-  // First time "More" is opened, the fresh image (with the live counter) is loaded directly.
-  // On later opens, a fresh image is preloaded in the background and swapped in once ready, so the current button stays visible meanwhile.
+  // Buy Me a Coffee button and visit count: not downloaded while the map loads (the button uses data-src).
+  // They are loaded once the map is idle, so they are already there when "More" is opened.
+  // Opening "More" later refreshes them (the button is preloaded in the background and swapped in once ready,
+  // so the current one stays visible meanwhile), unless they were refreshed less than MIN_REFRESH_INTERVAL ago.
   // -------------------------------
-  window.openInfoPage = function() { // window. prefix makes this function accessible from the HTML button element.
-    const infoPage = document.getElementById('info-page');
-    infoPage.classList.add('open');
+  let infoRefreshedAt = 0; // 0 = never loaded, e.g. if the map never became idle
+
+  function refreshInfoPageData() {
+    infoRefreshedAt = Date.now();
 
     const base = "https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=☕&slug=rbergua&button_colour=FFDD00&font_colour=000000&font_family=Lato&outline_colour=000000&coffee_colour=ffffff";
     const bmcImg = document.getElementById('bmc-btn');
     const anchor = document.querySelector('#info-content a[href*="buymeacoffee"]');
-    if (bmcImg && bmcImg.dataset.src) {        // First open: the button was never downloaded, so load the fresh one directly
-      bmcImg.removeAttribute('data-src');      // Remove data-src so loadDeferredImages() below skips this image (it would load it a second time)
+    if (bmcImg && bmcImg.dataset.src) {        // First load: the button was never downloaded, so load the fresh one directly
+      bmcImg.removeAttribute('data-src');      // Remove data-src so loadDeferredImages() skips this image (it would load it a second time)
       bmcImg.src = base + '&v_=' + Date.now();
     } else if (anchor) {
       const newImg = document.createElement('img');
@@ -894,12 +896,19 @@
       newImg.onload = () => {                  // Only swap once the new image is fully loaded (no flicker)
         const oldImg = document.getElementById('bmc-btn');
         if (oldImg) oldImg.replaceWith(newImg);
-        newImg.id = 'bmc-btn';                 // Transfer the id so future opens can find it again
+        newImg.id = 'bmc-btn';                 // Transfer the id so future refreshes can find it again
       };
     }
 
-    loadDeferredImages(infoPage);
     loadVisitCount();
+  }
+
+  window.openInfoPage = function() { // window. prefix makes this function accessible from the HTML button element.
+    const infoPage = document.getElementById('info-page');
+    infoPage.classList.add('open');
+
+    if (Date.now() - infoRefreshedAt >= MIN_REFRESH_INTERVAL) refreshInfoPageData();
+    loadDeferredImages(infoPage);
   }
 
   // Total visits. Primary: Cloudflare Worker (dash.cloudflare.com, Workers & Pages) that calls the
@@ -1278,6 +1287,7 @@
     Promise.all([ridesReady, racesReady, weatherReady]).then(() => { // Wait for all to finish
       generateCalendar();
       hideLoadingOverlay();                     // Progress bar. Milestone 5: all done — fade out overlay
+      map.once('idle', refreshInfoPageData);    // Map fully rendered: now preload the Buy Me a Coffee button and visit count for the "More" page
     });
   });
 
@@ -1302,6 +1312,7 @@
 
   // Minimum time between HEAD checks.
   // Prevents excessive network calls when users rapidly switch tabs/apps.
+  // Also used to refresh the Buy Me a Coffee button and the visit count on the "More" page.
   const MIN_REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes in ms
 
   // Returns:
