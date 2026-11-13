@@ -137,9 +137,11 @@
     return h * 60 + m;
   }
 
-  // Formats "minutes since midnight" back into a "HH:MM" string, for the x-axis tick labels.
+  // Formats "minutes since midnight" back into an "H:MM AM/PM" string, for the x-axis tick labels.
   function formatMinutes(total) {
-    return `${Math.floor(total / 60).toString().padStart(2, '0')}:${(total % 60).toString().padStart(2, '0')}`;
+    const hour = Math.floor(total / 60) % 24;
+    const minute = (total % 60).toString().padStart(2, '0');
+    return `${hour % 12 || 12}:${minute} ${hour >= 12 ? 'PM' : 'AM'}`;
   }
 
   // Great-circle distance between two lat/lon points, in miles.
@@ -351,7 +353,9 @@
   // `elevation`, if given, is an array of {x, y} points (y in `elevUnit`)
   // drawn as a soft gray area behind the lines, on its own right-hand axis so
   // its scale doesn't affect the main data.
-  function drawChart(canvasId, lines, xMin, xMax, yOpts = {}, symbols = null, elevation = null, elevUnit = '') {
+  // `sunLines`, if given, is an array of {x, label} drawn as a vertical dashed
+  // line (used for sunrise/sunset) with its label at the bottom of the plot.
+  function drawChart(canvasId, lines, xMin, xMax, yOpts = {}, symbols = null, elevation = null, elevUnit = '', sunLines = null) {
     const canvas = document.getElementById(canvasId);
     // Re-rendering (e.g. after a unit toggle) replaces the chart and legend in place.
     const existingChart = Chart.getChart(canvas);
@@ -419,6 +423,39 @@
       },
     };
 
+    // Custom plugin: draws a vertical dashed line at each sunrise/sunset time, with
+    // its label ("Sunset 16:46") at the bottom of the plot, away from the weather symbols.
+    const sunPlugin = {
+      id: 'sunLines',
+      afterDatasetsDraw(chart) {
+        const { ctx, scales, chartArea } = chart;
+        ctx.save();
+        sunLines.forEach(s => {
+          const x = scales.x.getPixelForValue(s.x);
+          ctx.beginPath();
+          ctx.setLineDash([4, 4]);
+          ctx.strokeStyle = '#000';
+          ctx.lineWidth = 1.5;
+          ctx.moveTo(x, chartArea.top);
+          ctx.lineTo(x, chartArea.bottom);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.font = '12px Arial';
+          // Label centered on the line, on a white backing so the line doesn't strike through it.
+          // Clamped so it never runs past the plot's left/right edges.
+          const textWidth = ctx.measureText(s.label).width;
+          const cx = Math.min(Math.max(x, chartArea.left + textWidth / 2 + 3), chartArea.right - textWidth / 2 - 3);
+          const baseline = chartArea.bottom - 4;
+          ctx.fillStyle = 'rgba(255,255,255,0.9)';
+          ctx.fillRect(cx - textWidth / 2 - 3, baseline - 12, textWidth + 6, 16);
+          ctx.fillStyle = '#000';
+          ctx.textAlign = 'center';
+          ctx.fillText(s.label, cx, baseline);
+        });
+        ctx.restore();
+      },
+    };
+
     new Chart(canvas, {
       type: 'line',
       data: {
@@ -433,7 +470,7 @@
         })),
       },
       // Extra top padding makes room for the symbol row above the highest line.
-      plugins: [...(symbols ? [symbolPlugin] : []), ...(elevation ? [elevationPlugin] : [])],
+      plugins: [...(symbols ? [symbolPlugin] : []), ...(elevation ? [elevationPlugin] : []), ...(sunLines?.length ? [sunPlugin] : [])],
       options: {
         layout: { padding: { top: symbols ? 20 : 0 } },
         // Without this, the default intersect:true mode only fires the
@@ -546,10 +583,16 @@
     );
     const windRange = niceRange(ride.samples.flatMap(s => [convWind(s.wind_speed_mph), convWind(s.wind_gust_mph)]), true);
 
+    // Sunrise/sunset lines, only if they fall on the ride's date and inside the plotted time range.
+    const sunLines = [[ride.sunrise, 'Sunrise'], [ride.sunset, 'Sunset']]
+      .filter(([time]) => time && time.slice(0, 10) === ride.date.slice(0, 10))
+      .map(([time, name]) => ({ x: minutesOfDay(time), label: `${name} ${formatMinutes(minutesOfDay(time))}` }))
+      .filter(s => s.x >= xMin && s.x <= xMax);
+
     drawChart('chart-temp', [
       { label: `Temperature (${tempUnit})`, data: series('temp_F', convTemp) },
       { label: `Feels like (${tempUnit})`, data: series('feels_like_F', convTemp), dashed: true },
-    ], xMin, xMax, tempRange, symbols, elevation, elevUnit);
+    ], xMin, xMax, tempRange, symbols, elevation, elevUnit, sunLines);
     drawChart('chart-wind', [
       { label: `Wind speed (${windUnit})`, data: series('wind_speed_mph', convWind) },
       { label: `Wind gust (${windUnit})`, data: series('wind_gust_mph', convWind), dashed: true },
