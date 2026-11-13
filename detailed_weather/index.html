@@ -424,7 +424,7 @@
     };
 
     // Custom plugin: draws a vertical dashed line at each sunrise/sunset time, with
-    // its label ("Sunset 16:46") at the bottom of the plot, away from the weather symbols.
+    // its label ("Sunset 4:46 PM") at the bottom of the plot, away from the weather symbols.
     const sunPlugin = {
       id: 'sunLines',
       afterDatasetsDraw(chart) {
@@ -501,7 +501,20 @@
             type: 'linear',
             min: xMin,
             max: xMax,
-            ticks: { stepSize: 30, callback: formatMinutes },
+            // On narrow charts, label only the full hours when the 30-minute labels
+            // would not fit. The grid lines stay at every 30 minutes, and the check
+            // runs on every resize, so rotating a phone works too.
+            ticks: {
+              stepSize: 30,
+              autoSkip: false,
+              maxRotation: 0,
+              callback(value) {
+                const labelWidth = 70;    // approx. px for "12:30 PM" plus spacing
+                const axesWidth = 100;    // approx. px taken by the left (and right) y axes
+                const crowded = this.ticks.length * labelWidth > this.chart.width - axesWidth;
+                return crowded && value % 60 !== 0 ? '' : formatMinutes(value);
+              },
+            },
             grid: { display: true },
           },
         },
