@@ -957,6 +957,7 @@
 
   // ── Event Banner ──────────────────────────────────────────────────────────────
   // Reads banner.json and shows the banner only if today falls within [start, end].
+  // This info is available in assets/banners/banner.json.
   // If the file is missing, malformed, or dates are expired → banner stays hidden.
   // The PNG will scale to the height below at its natural width.
   const BANNER_HEIGHT_MOBILE_PX  = 65;  // Mobile: smaller, doesn't block much of the map
@@ -1480,8 +1481,6 @@
   const sheetTitle = document.getElementById("sheet-title");
   const sheetMeta  = document.getElementById("sheet-meta");
   const sheetBtn   = document.getElementById("sheet-source-btn");
-  const infoBtnEl  = document.getElementById("info-btn");
-  const racesBtnEl = document.getElementById("races-btn");
   const metricBtn   = document.getElementById('metric-btn');
   const menuToggleBtn = document.getElementById('menu-toggle-btn');
   const menuPanel      = document.getElementById('menu-panel');
@@ -1508,15 +1507,14 @@
   // Assigned inside loadRoutes; called by closeSheet to undo highlighting on dismiss
   let restoreAllRoutes = null;
 
-  // Toggle Metric button and re-render current day's routes with new units
+  // Toggle Metric button and refresh the text that shows units. Units only affect text,
+  // so the map layers, markers, selection and view are left untouched.
   metricBtn.addEventListener('click', () => {
     metricUnits = !metricUnits;
     metricBtn.classList.toggle('active', metricUnits);
     const selected = document.querySelector('.day-column.selected');
-    if (selected?.dataset.date) {
-      loadRoutes(selected.dataset.date);
-      updateWeather(selected.dataset.date);
-    }
+    if (selected?.dataset.date) updateWeather(selected.dataset.date);
+    if (selectedRide) renderSheetMeta(selectedRide);
   });
 
   document.getElementById('sheet-close').addEventListener('click', closeSheet);
@@ -1541,8 +1539,24 @@
     sheetBar.style.background  = ride.color || "#007bff";
     sheetClub.textContent      = ride.club_name;
     sheetTitle.textContent     = ride.title;
+    renderSheetMeta(ride);
+    updateSheetWeather(ride);
 
-    // Build badge chips: time | distance + elevation | women-only
+    // Wire up the source button
+    sheetBtn.textContent = `View on ${ride.source}`;
+    if (ride.url) { sheetBtn.href = ride.url; sheetBtn.classList.remove("no-url"); }
+    else          { sheetBtn.removeAttribute("href"); sheetBtn.classList.add("no-url"); }
+
+    sheet.inert = false;
+    sheet.classList.add("open");
+    closeMenuPanel();  // don't let the ride sheet and the hamburger panel overlap
+    menuToggleBtn.classList.add("sheet-open");
+    document.querySelector('.maplibregl-ctrl-attrib')?.classList.add('hidden');
+  }
+
+  // Builds the badge chips in the ride card: time | distance + elevation | women-only.
+  // Separate from openSheet so the Metric toggle can refresh the units in place.
+  function renderSheetMeta(ride) {
     sheetMeta.innerHTML = "";
     const addBadge = (text, extra = '') => {
       const b = document.createElement("span");
@@ -1562,19 +1576,6 @@
     }
 
     if (ride.women_only) addBadge("Women only", "women");
-
-    updateSheetWeather(ride);
-
-    // Wire up the source button
-    sheetBtn.textContent = `View on ${ride.source}`;
-    if (ride.url) { sheetBtn.href = ride.url; sheetBtn.classList.remove("no-url"); }
-    else          { sheetBtn.removeAttribute("href"); sheetBtn.classList.add("no-url"); }
-
-    sheet.inert = false;
-    sheet.classList.add("open");
-    closeMenuPanel();  // don't let the ride sheet and the hamburger panel overlap
-    menuToggleBtn.classList.add("sheet-open");
-    document.querySelector('.maplibregl-ctrl-attrib')?.classList.add('hidden');
   }
 
   function updateSheetWeather(ride) {
@@ -1897,7 +1898,10 @@
     //console.log("Dates with rides:", Object.keys(ridesByDate));
     //console.log("Dates with races:", Object.keys(racesByDate));
 
-    // Remove old route layers, sources, and pin markers from previous render
+    // Remove old route layers, sources, pin markers and layer event listeners from previous render.
+    // Layer listeners must be removed explicitly: removing a layer does not unregister them.
+    map._routeListeners?.forEach(([type, id, handler]) => map.off(type, id, handler));
+    map._routeListeners = [];
     map._routeMarkers?.forEach(m => m.remove());
     map._routeMarkers = [];
     map._routeLayerIds?.forEach(id => {
@@ -2302,36 +2306,40 @@
         openSheet(ride);
       };
 
-      map.on('click', hitId, e => {
+      // Registers a listener on this ride's hit layer and tracks it so the next loadRoutes() can remove it.
+      const onHitLayer = (type, handler) => {
+        map.on(type, hitId, handler);
+        map._routeListeners.push([type, hitId, handler]);
+      };
+
+      onHitLayer('click', e => {
         const hits = map.queryRenderedFeatures(e.point, { layers: [...rideHitLayerIds] });
         if (hits[0]?.layer.id === hitId) selectRide();
       });
       markerEl.getElement().addEventListener('click', e => { e.stopPropagation(); selectRide(); });
 
       if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
-        // HTML injected into the hover tooltip popup
-        const tooltipContent = buildTooltipHTML(ride, rideTime);
-
-        // Opens a popup anchored to the cursor position.
+        // Opens a popup anchored to the cursor position. The HTML is built on each call
+        // so it always reflects the current Metric/Imperial setting.
         function showPopup(lngLat) {
           if (activePopup) activePopup.remove();
           activePopup = new maplibregl.Popup({
             closeButton: false, closeOnClick: false,
             className: 'ride-tooltip', maxWidth: 'none'
-          }).setLngLat(lngLat).setHTML(tooltipContent).addTo(map);
+          }).setLngLat(lngLat).setHTML(buildTooltipHTML(ride, rideTime)).addTo(map);
         }
 
-        map.on('mouseenter', hitId, e => {
+        onHitLayer('mouseenter', e => {
           hoveredHitId = hitId;
           map.getCanvas().style.cursor = 'pointer';
           if (currentHL) return;
           highlightRoute(segmentLines);
           showPopup(e.lngLat);
         });
-        map.on('mousemove', hitId, e => {
+        onHitLayer('mousemove', e => {
           if (!currentHL && hoveredHitId === hitId) activePopup?.setLngLat(e.lngLat);
         });
-        map.on('mouseleave', hitId, () => {
+        onHitLayer('mouseleave', () => {
           // Guard: only restore if the mouse hasn't already entered a different route
           // (mouseenter on the new route fires before mouseleave on the old one)
           if (hoveredHitId === hitId) {
