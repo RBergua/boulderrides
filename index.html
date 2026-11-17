@@ -162,6 +162,11 @@
 
     /* Map fills the remaining screen height */
     #map { height: calc(100% - 64px); } /* 100% minus calendar height */
+    /* Android Chrome: avoid a white blank gap at the bottom when showing/hiding the ride sheet */
+    @supports (height: 100dvh) {
+      html, body { height: 100dvh; }
+      #map { height: calc(100dvh - 64px); }
+    }
 
     /* Shared button base: reused by info-btn and metric-btn */
     .overlay-btn {
@@ -1140,6 +1145,17 @@
     }
   });
 
+  // Mobile browsers can change the viewport (address bar show/hide) without MapLibre noticing, leaving a blank gap
+  // at the bottom. Re-sync the canvas to its container whenever the viewport changes.
+  let mapResizeFrame = 0;
+  const syncMapSize = () => {
+    cancelAnimationFrame(mapResizeFrame);
+    mapResizeFrame = requestAnimationFrame(() => map.resize());
+  };
+  window.addEventListener('resize', syncMapSize);
+  window.addEventListener('orientationchange', syncMapSize);
+  window.visualViewport?.addEventListener('resize', syncMapSize);
+
   setProgress(10, 'Loading group rides…');     // Progress bar. Milestone 1: map object created
 
   // Zoom in/out buttons (compass hidden)
@@ -1531,6 +1547,11 @@
     const swipeDistance = e.changedTouches[0].clientY - touchStartY;
     if (swipeDistance > 60) closeSheet(); // 60px downward swipe closes the sheet. Tune the 60 to make it more or less sensitive
   }, { passive: true });
+
+  // Opening/closing the card can make the browser toolbar move. Re-sync the map once the animation settles.
+  sheet.addEventListener("transitionend", (e) => {
+    if (e.target === sheet && e.propertyName === "transform") syncMapSize();
+  });
 
   // Populates the shared ride card.
   function openSheet(ride) {
