@@ -342,6 +342,13 @@
     }
     #sheet-weather-btn:active { background: #0056b3; }
 
+    /* Detailed weather opens in a full-screen frame above the map, so closing it
+       returns to the live map instead of reloading the site. */
+    #weather-frame {
+      position: fixed; inset: 0; width: 100%; height: 100%;
+      border: 0; background: #fff; z-index: 5000;
+    }
+
     /* On touch devices: hide info button, races button, metric button, and map attribution behind sheet when open */
     @media (pointer: coarse) {
       #menu-toggle-btn { transition: background 0.2s, opacity 0.2s ease; }
@@ -1641,6 +1648,38 @@
       weatherBtn.style.display = 'none';
     }
   }
+
+  // Shows detailed weather in an overlay frame so the map page is never unloaded. A normal navigation relies on
+  // the browser's back/forward cache, which it may evict (e.g. under memory pressure), causing a full reload.
+  // A history entry lets the browser/Android Back button close the overlay too.
+  let weatherFrame = null;
+
+  function closeWeatherFrame() {
+    if (!weatherFrame) return;
+    weatherFrame.remove();
+    weatherFrame = null;
+    map.resize();
+  }
+
+  document.getElementById('sheet-weather-btn').addEventListener('click', (e) => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+    e.preventDefault();
+    if (weatherFrame) return;
+    history.pushState({ weatherOpen: true }, '');
+    weatherFrame = document.createElement('iframe');
+    weatherFrame.id = 'weather-frame';
+    weatherFrame.title = 'Detailed weather';
+    document.body.appendChild(weatherFrame);
+    weatherFrame.contentWindow.location.replace(e.currentTarget.href); // replace() avoids adding a joint history entry
+  });
+
+  window.addEventListener('message', (e) => {
+    if (e.origin !== location.origin || e.data?.type !== 'close-detailed-weather') return;
+    if (history.state?.weatherOpen) history.back(); // popstate below closes the frame
+    else closeWeatherFrame();
+  });
+
+  window.addEventListener('popstate', closeWeatherFrame);
 
   // Dismiss the card and clear both selection and hover preview.
   function closeSheet() {

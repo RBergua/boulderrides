@@ -25,7 +25,7 @@
 
 <style>
   * { box-sizing: border-box; }
-  body { font-family: Arial; margin: 0; background: #fff; color: #222; }
+  body { font-family: Arial; margin: 0; background: #fff; color: #222; overflow-anchor: none; }
 
   /* Keep the title and controls aligned with the centered forecast charts. */
   header {
@@ -115,7 +115,10 @@
 <script>
   // Goes back to the map, reusing cached state instead of a full reload when possible.
   function goHome() {
-    if (document.referrer && new URL(document.referrer).origin === location.origin && history.length > 1) {
+    // Embedded in the map page's overlay frame: ask it to close the frame.
+    if (window.parent !== window) {
+      window.parent.postMessage({ type: 'close-detailed-weather' }, location.origin);
+    } else if (document.referrer && new URL(document.referrer).origin === location.origin && history.length > 1) {
       history.back();
     } else {
       window.location.href = '/';
@@ -472,6 +475,7 @@
       // Extra top padding makes room for the symbol row above the highest line.
       plugins: [...(symbols ? [symbolPlugin] : []), ...(elevation ? [elevationPlugin] : []), ...(sunLines?.length ? [sunPlugin] : [])],
       options: {
+        animation: existingChart ? false : undefined, // Skip the draw-in animation on unit-toggle re-renders
         layout: { padding: { top: symbols ? 20 : 0 } },
         // Without this, the default intersect:true mode only fires the
         // tooltip when the mouse sits (or mouse tabs) lands exactly on a sample point.
@@ -542,7 +546,15 @@
   function toggleUnits() {
     isMetric = !isMetric;
     document.getElementById('unit-btn').classList.toggle('active', isMetric);
+
+    // Rebuilding the charts briefly collapses their blocks, which would shift the page.
+    // Pin each block's height and the scroll position until the new charts are in place.
+    const blocks = document.querySelectorAll('.chart-block');
+    blocks.forEach(b => { b.style.minHeight = b.offsetHeight + 'px'; });
+    const scrollY = window.scrollY;
     render();
+    window.scrollTo(0, scrollY);
+    requestAnimationFrame(() => blocks.forEach(b => { b.style.minHeight = ''; }));
   }
 
   // Converts "HH:MM" (24-hour) to "H:MM AM/PM" (12-hour), same as the main map page.
@@ -614,10 +626,10 @@
       { label: 'Chance of precipitation (%)', data: series('rain_chance') },
     ], xMin, xMax, { min: 0, max: 100 }, null, elevation, elevUnit);
 
-    // Wind-direction map, only if a matching route was found.
+    // The wind map doesn't depend on units, so it's drawn only once.
     const windmapBlock = document.getElementById('windmap-block');
     windmapBlock.hidden = !route;
-    if (route) drawWindMap('chart-windmap', route, segments, ride.samples);
+    if (route && !windMap) drawWindMap('chart-windmap', route, segments, ride.samples);
   }
 
   (async function init() {
