@@ -1156,6 +1156,14 @@
   window.addEventListener('orientationchange', syncMapSize);
   window.visualViewport?.addEventListener('resize', syncMapSize);
 
+  // Returning from another page (e.g. detailed weather via history.back()) restores this page from the back/forward
+  // cache with a stale canvas size, and Android's address bar may still be settling. Resize now and again shortly after.
+  const syncMapSizeAfterReturn = () => {
+    syncMapSize();
+    setTimeout(syncMapSize, 300);
+  };
+  window.addEventListener('pageshow', (e) => { if (e.persisted) syncMapSizeAfterReturn(); });
+
   setProgress(10, 'Loading group rides…');     // Progress bar. Milestone 1: map object created
 
   // Zoom in/out buttons (compass hidden)
@@ -1361,6 +1369,7 @@
   // The map stays visible during the check; progress is reported through the refresh toast.
   document.addEventListener('visibilitychange', async () => {
     if (document.visibilityState !== 'visible') return; // We only refresh when the user returns, not when they leave
+    syncMapSizeAfterReturn();
     if (refreshInProgress) return;
 
     const now        = Date.now();
