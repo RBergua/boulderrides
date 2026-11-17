@@ -8,7 +8,7 @@
   "theme_color": "#007bff",
   "icons": [
     {
-      "src": "/assets/icons/apple-touch-icon.png",
+      "src": "/assets/icons/icon-1024.png",
       "sizes": "1024x1024",
       "type": "image/png",
       "purpose": "maskable"
