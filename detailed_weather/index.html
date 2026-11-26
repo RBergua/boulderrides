@@ -470,6 +470,7 @@
           borderWidth: 2,
           pointRadius: 0, // no markers
           tension: 0.3,
+          tooltipFirst: !!line.tooltipFirst,
         })),
       },
       // Extra top padding makes room for the symbol row above the highest line.
@@ -525,6 +526,7 @@
         plugins: {
           legend: { display: false },
           tooltip: {
+            itemSort: (a, b) => (b.dataset.tooltipFirst - a.dataset.tooltipFirst) || (a.datasetIndex - b.datasetIndex),
             callbacks: {
               // Default title would show the raw x value (minutes since
               // midnight, e.g. "600"); format it as a time instead, reusing
@@ -620,7 +622,8 @@
     ], xMin, xMax, tempRange, symbols, elevation, elevUnit, sunLines);
     drawChart('chart-wind', [
       { label: `Wind speed (${windUnit})`, data: series('wind_speed_mph', convWind) },
-      { label: `Wind gust (${windUnit})`, data: series('wind_gust_mph', convWind), dashed: true },
+      // Listed above wind speed in the tooltip (wind gust is always higher). The legend keeps wind speed first.
+      { label: `Wind gust (${windUnit})`, data: series('wind_gust_mph', convWind), dashed: true, tooltipFirst: true },
     ], xMin, xMax, windRange, null, elevation, elevUnit);
     drawChart('chart-rain', [
       { label: 'Chance of precipitation (%)', data: series('rain_chance') },
